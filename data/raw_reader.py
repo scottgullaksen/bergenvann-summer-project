@@ -36,7 +36,7 @@ class CSVFileReader(object):
 		if len(self.paths) == 0:
 			raise ValueError("The provided directory/file contained no csv files")
 	
-	def yield_rows(self, dir_or_filename= None):
+	def yield_all_rows(self, dir_or_filename= None):
 		"""
 		Returns each row from the csv file or dir specified. Generator.
 		"""
@@ -55,6 +55,10 @@ class CSVFileReader(object):
 					for row in dataset:
 						yield row
 
+	def get_row(self, i, dir_or_filename):
+		for idx, row in enumerate(self.yield_all_rows(dir_or_filename= dir_or_filename)):
+			if idx == i:
+				return row
 
 if __name__ == '__main__':
 
