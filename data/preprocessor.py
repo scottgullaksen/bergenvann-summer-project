@@ -14,14 +14,13 @@ class CSVFileReader(object):
 
 	def __init__(self, path= None):
 
-		logger = logging.getLogger(__name__)
+		logger = logging.getLogger('dev')
+		logger.setLevel(logging.INFO)
 
 		# Set path to raw corpus
 		path = os.path.join(
 			os.path.dirname(os.path.abspath(__file__)), 'raw_data'
 		) if not path else path
-
-		print(path)
 
 		logger.info(f'Instantiating with path: {path}')
 
@@ -32,9 +31,7 @@ class CSVFileReader(object):
 			for filename in filenames if os.path.splitext(filename)[1] == '.csv'
 		] if os.path.isdir(path) else [path]
 
-		print(self.paths)
-
-		logger.info(f'csv files found: {self.paths}')
+		logger.info(f'csv files found: {list(map( lambda f: os.path.basename(f), self.paths))}')
 
 		if len(self.paths) == 0:
 			raise ValueError("The provided directory/file contained no csv files")
