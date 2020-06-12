@@ -1,0 +1,23 @@
+Something like this:
+-------------------------------------------
+
+|-[year]
+|  .   | 
+|  .   |-[month]
+|  .   |   .   |
+|      |   .   |-[day].pickle
+|      |   .   |      .
+|      |       |      .
+|      |       |      .
+
+
+The pickle files serializes objects of the following format (python dict)
+{
+    "[time_step, e.g. minutes]": {
+           "[pumpstation_name]": [pump values that day w/specified intervall...],
+            ...,
+           "weather": {
+                 "precitipation": [values that day with specified intervalls....]
+             }                 
+     }
+}
