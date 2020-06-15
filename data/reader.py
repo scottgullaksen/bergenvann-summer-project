@@ -8,7 +8,12 @@ class PickledDataReader(object):
 	def __init__(self, path= None):
 
 		# Path to processed file directory
-		self.path = os.path.join(__file__, "preprocessed_data") if not path else path
+		self.path = os.path.join(
+			os.path.dirname(__file__), 'pickled_data'
+		)
+
+	def get_available_years(self):
+		return next(os.walk(self.path))[0]
 
 	def get_file_content(self, start_date, end_date):
 		"""
