@@ -65,7 +65,7 @@ class CSVFileReader(object):
 				if any(c.isnumeric() for c in raw_data[-1]) else 0.0
 		}
 
-	def yield_all_rows(self, dir_or_filename= None):
+	def read_datapoints_from(self, dir_or_filename= None):
 		"""
 		Returns each row from the csv file or dir specified. Generator.
 		"""
@@ -82,6 +82,8 @@ class CSVFileReader(object):
 						) else ';'
 					)
 					for row in dataset:
+
+						# Note to self: Make dictionary of cleaning functions if extend
 						cleaned = self.clean_pump_data(row) if 'pumpedata' in path else self.clean_weather_data(row)
 						if not cleaned: continue  # Not a data row
 						yield cleaned
