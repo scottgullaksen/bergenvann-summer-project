@@ -39,6 +39,9 @@ if __name__ == "__main__":
 		for name in files
 	]
 
-	with open(pickle_files[10], 'rb') as f:
+	idx = len(pickle_files) // 2
+
+	with open(pickle_files[-100], 'rb') as f:
+		print(pickle_files[-100])
 		data = pickle.load(f)
-		print(data['vaerdata'])
+		print(data['hours']['vaerdata'])

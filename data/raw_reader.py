@@ -10,7 +10,6 @@ with open('./logging.yaml', 'r') as f:
 
 logging.config.dictConfig(log_cfg)
 
-
 class CSVFileReader(object):
 	"""
 	Thought to self: Make this an interface/abstract class?
@@ -47,26 +46,31 @@ class CSVFileReader(object):
 		"""
 		Filters rows that contain actual data and cleans them
 		"""
-		
-		if not (raw_data and raw_data[0][0].isnumeric()):
-			return None  # Irrelevant row
-
-		return {
+		try:
+			datapoint = {
 			'date': datetime.strptime(raw_data[0], '%Y-%m-%d %H:%M'),
 			'quantity (l/s)': float(raw_data[2].replace(',', '.')),
 			'level (m)': float(raw_data[4].replace(',', '.'))
 		}
+		except Exception as e:
+			self.logger.info(f'raw data: {raw_data} could not be dealt with')
+			datapoint = None
+		return datapoint
+
 
 	def clean_weather_data(self, raw_data):
-		if not (raw_data and raw_data[0][0].isnumeric()):
-			return None  # Irrelevant row
-		
-		return {
+		try:
+		 datepoint = {
 			'date': datetime.strptime(raw_data[2], '%d.%m.%Y %H:%M'),
-			'temp (C)': float(raw_data[-2].replace(',', '.')),
+			'temp (C)': float(raw_data[-2].replace(',', '.'))
+				if any(c.isnumeric() for c in raw_data[-2]) else None,
 			'precipitation (mm)': float(raw_data[-1].replace(',', '.'))
 				if any(c.isnumeric() for c in raw_data[-1]) else 0.0
 		}
+		except Exception as e:
+			self.logger.warning(f'raw data: {raw_data} could not be dealt with')
+			datepoint = None
+		return datepoint
 
 	def read_datapoints_from(self, dir_or_filename= None):
 		"""
@@ -90,11 +94,6 @@ class CSVFileReader(object):
 						cleaned = self.clean_pump_data(row) if 'pumpedata' in path else self.clean_weather_data(row)
 						if not cleaned: continue  # Not a data row
 						yield cleaned
-
-	def get_row(self, i, dir_or_filename):
-		for idx, row in enumerate(self.yield_all_rows(dir_or_filename= dir_or_filename)):
-			if idx == i:
-				return row
 
 if __name__ == '__main__':
 
