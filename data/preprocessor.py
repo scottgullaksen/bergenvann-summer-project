@@ -34,47 +34,45 @@ class Preprocessor(object):
 			os.path.join(self.target, date.strftime('%Y/%m/%d') + '.pickle')
 		)
 
+	def save(self, target, data):
+		with open(target, 'wb') as f:
+			pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+	def load(self, target):
+		parent = os.path.dirname(target)
+		if not os.path.exists(parent): os.makedirs(parent)
+
+		if not os.path.exists(target): # File not created yet
+			return { 'hours': { } } # Create datastructure 
+
+		with open(target, 'rb') as f:
+			return pickle.load(f)
+
 	def transform(self, pickle_keys: list):
 		"""
-
 		"""
-
-		new_file = True
 		last_datapoint = None
 
 		for kwrd in pickle_keys:
-			for idx, datapoint in enumerate(self.csv_reader.yield_rows(dir_or_filename= kwrd)):
+			for datapoint in self.csv_reader.yield_rows(dir_or_filename= kwrd):
 
-				new_day = last_datapoint['date'].date() != datapoint['date'].date()
-				new_file = not datapoint or new_day
-				if new_file:
+				# Open a new file if first time through loop or new day
+				if not last_datapoint or last_datapoint['date'].date() != datapoint['date'].date():
+
+					# Save modified datastructure if not first time trough loop
+					if last_datapoint: self.save(target, data)
 
 					target = self.abspath(datapoint['date'])
-					parent = os.path.dirname(target)
 
-					if not os.path.exists(parent): os.makedirs(parent)
+					data = self.load(target)
 
-					if not os.path.exists(target):  # File not created yet
+				if kwrd in data['hours']:
+					for k in datapoint.keys():
+						data['hours'][kwrd][k].append(datapoint[k])
+				else:
+					data['hours'][kwrd] = { k: [v] for k, v in datapoint.items() }
 
-						# Create datastructure 
-						data =  {
-							'hours': {
-								kwrd: {
-									k: [] for k in datapoint.keys()
-								}
-							}
-						}
-
-						# Open and serialize the pickle to disk
-						with open(target, 'wb') as f:
-							pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-					
-					f = open(target, 'rb+')
-
-				if not datapoint or 
-
-
-
+		self.save(target, data)
 
 if __name__ == "__main__":
 
