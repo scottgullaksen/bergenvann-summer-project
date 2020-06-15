@@ -3,6 +3,7 @@ import csv
 import logging
 import logging.config
 import yaml
+from datetime import datetime
 
 with open('./logging.yaml', 'r') as f:
 	log_cfg = yaml.safe_load(f.read())
@@ -11,6 +12,12 @@ logging.config.dictConfig(log_cfg)
 
 
 class CSVFileReader(object):
+	"""
+	Thought to self: Make this an interface/abstract class?
+	Specify required input to preprocessor class -> Should either
+	do cleaning here or specify a cleaning (lambda) function to be used in
+	preprocessor
+	"""
 
 	def __init__(self, path= None):
 
@@ -35,16 +42,38 @@ class CSVFileReader(object):
 
 		if len(self.paths) == 0:
 			raise ValueError("The provided directory/file contained no csv files")
-	
+
+	def clean_pump_data(self, raw_data):
+		"""
+		Filters rows that contain actual data and cleans them
+		"""
+		
+		if not (raw_data and raw_data[0][0].isnumeric()):
+			return None  # Irrelevant row
+
+		return {
+			'date': datetime.strptime(raw_data[0], '%Y-%m-%d %H:%M'),
+			'quantity (l/s)': float(raw_data[2].replace(',', '.')),
+			'level (m)': float(raw_data[4].replace(',', '.'))
+		}
+
+	def clean_weather_data(self, raw_data):
+		return {
+			'date': datetime.strptime(raw_data[2], '%d.%m.%Y %H:%M'),
+			'temp (C)': float(raw_data[-2].replace(',', '.')),
+			'precipitation (mm)': float(raw_data[-1].replace(',', '.'))
+				if any(c.isnumeric() for c in raw_data[-1]) else 0.0
+		}
+
 	def yield_all_rows(self, dir_or_filename= None):
 		"""
 		Returns each row from the csv file or dir specified. Generator.
 		"""
-		# Return everything uunder root if nothing is specified
+		# Return everything under root if nothing is specified
 		if not dir_or_filename: dir_or_filename = os.path.dirname(self.root)
 
 		for path in self.paths:
-			if dir_or_filename in path:
+			if dir_or_filename in path:  # Only return contents of relevant files
 				with open(path) as csvfile:
 					dataset = csv.reader(
 						csvfile,
@@ -53,7 +82,9 @@ class CSVFileReader(object):
 						) else ';'
 					)
 					for row in dataset:
-						yield row
+						cleaned = self.clean_pump_data(row) if 'pumpedata' in path else self.clean_weather_data(row)
+						if not cleaned: continue  # Not a data row
+						yield cleaned
 
 	def get_row(self, i, dir_or_filename):
 		for idx, row in enumerate(self.yield_all_rows(dir_or_filename= dir_or_filename)):
@@ -69,7 +100,7 @@ if __name__ == '__main__':
 	reader = CSVFileReader(path)
 
 	counter = 0
-	for row in reader.yield_rows():
+	for row in reader.yield_all_rows():
 		if counter == 10: break
 		counter += 1
 		print(row)
