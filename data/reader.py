@@ -27,3 +27,18 @@ class PickledDataReader(object):
 		"""
 		for content in self.get_file_content(start_date, end_date):
 			yield content[pump_time_step], content[weather_time_step]
+
+
+if __name__ == "__main__":
+	import os
+	import pickle
+
+	pickle_files = [
+		os.path.join(root, name)
+		for root, dir_, files in os.walk(os.path.join(os.path.dirname(__file__), 'pickled_data'))
+		for name in files
+	]
+
+	with open(pickle_files[10], 'rb') as f:
+		data = pickle.load(f)
+		print(data['vaerdata'])

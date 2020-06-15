@@ -58,6 +58,9 @@ class CSVFileReader(object):
 		}
 
 	def clean_weather_data(self, raw_data):
+		if not (raw_data and raw_data[0][0].isnumeric()):
+			return None  # Irrelevant row
+		
 		return {
 			'date': datetime.strptime(raw_data[2], '%d.%m.%Y %H:%M'),
 			'temp (C)': float(raw_data[-2].replace(',', '.')),
@@ -102,7 +105,7 @@ if __name__ == '__main__':
 	reader = CSVFileReader(path)
 
 	counter = 0
-	for row in reader.yield_all_rows():
+	for row in reader.read_datapoints_from():
 		if counter == 10: break
 		counter += 1
 		print(row)

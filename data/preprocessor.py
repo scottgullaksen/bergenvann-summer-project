@@ -1,4 +1,3 @@
-from data.raw_reader import CSVFileReader
 import logging
 import os
 from datetime import datetime
@@ -14,15 +13,15 @@ class Preprocessor(object):
 	Args:
 		reader (object): The reader object to be wrapped. Provides reading capabilities to the dataset 
 	"""
-	def __init__(self, csv_reader= None, target_dir= None):
+	def __init__(self, reader, target_dir= None):
 
 		self.logger = logging.getLogger('dev')
 		self.logger.setLevel(logging.INFO)
 
-		self.csv_reader = CSVFileReader() if not csv_reader else csv_reader
+		self.reader = reader
 
 		self.target = os.path.join(
-			os.path.dirname(os.path.abspath(__file__)), 'data'
+			os.path.dirname(os.path.abspath(__file__)), 'pickled_data'
 		) if not target_dir else target_dir
 
 
@@ -54,13 +53,13 @@ class Preprocessor(object):
 		last_datapoint = None
 
 		for kwrd in pickle_keys:
-			for datapoint in self.csv_reader.yield_rows(dir_or_filename= kwrd):
+			for datapoint in self.reader.read_datapoints_from(dir_or_filename= kwrd):
 
 				# Open a new file if first time through loop or new day
 				if not last_datapoint or last_datapoint['date'].date() != datapoint['date'].date():
 
 					# Save modified datastructure if not first time trough loop
-					if last_datapoint: self.save(target, data)
+					if last_datapoint != None: self.save(target, data)
 
 					target = self.abspath(datapoint['date'])
 
@@ -71,18 +70,25 @@ class Preprocessor(object):
 						data['hours'][kwrd][k].append(datapoint[k])
 				else:
 					data['hours'][kwrd] = { k: [v] for k, v in datapoint.items() }
+				
+				last_datapoint = datapoint
 
 		self.save(target, data)
 
 if __name__ == "__main__":
+	from raw_reader import CSVFileReader
 
-	preprocessor = Preprocessor()
+	csv_reader = CSVFileReader()
+
+	preprocessor = Preprocessor(reader=csv_reader)
 
 	keys = [
-		os.path.splitext(filename)
+		os.path.splitext(filename)[0]
 		for filename in os.listdir(
-			os.path.join(os.path.dirname(__file__), 'pumpedata') 
-		)
+			os.path.normpath(
+				os.path.join(os.path.dirname(__file__), 'raw_data/pumpedata') 
+			)
+		) if os.path.splitext(filename)[1] == '.csv'
 	] + ['vaerdata']
 
 	preprocessor.transform(pickle_keys=keys)
