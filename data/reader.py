@@ -23,33 +23,31 @@ class PickledDataReader(object):
 			os.path.dirname(__file__), 'pickled_data'
 		)
 
+	def get_paths_by_basename(self, paths, basenames: list = None):
+		all_paths = [
+			os.path.join(path, basename)
+			for path in paths for basename in os.listdir(basenames)  # Flattens
+		]
+		if not basenames: return all_paths
+		for path in all_paths:
+			for base in basenames:
+				if os.path.basename(path) == base:
+					yield path
+				else:
+					self.logger.warning(f'the provided base {base} did not match any path')
+
 	def get_available_years(self): return os.listdir(self.path)
 
 	def get_dirs_by_years(self, years: list= None):
-		years = self.get_available_years() if not years else years
-		for dirname in years:
-			year_path = os.path.join(self.path, dirname)
-			if os.path.exists(year_path):
-				yield year_path
-			else:
-				self.logger.warning(f'the provided year {dirname} does not have a path')
+		return self.get_paths_by_basename([self.path], years)
 
 	def get_dirs_by_months(self, years:list= None, months: list = None):
 		year_paths = self.get_dirs_by_years(years)
-		all_month_paths = [
-			os.path.join(year_path, month)
-			for year_path in year_paths for month in os.listdir(year_path)  # Flattens
-		]
-		if not months: return all_month_paths
-		for month_path in all_month_paths:
-			for month in months:
-				if os.path.basename(month_path) == month:
-					yield month_path
-				else:
-					self.logger.warning(f'the provided month {month} did not match any path')
+		return self.get_paths_by_basename(year_paths, months)
 
-	def get_dirs_to_months_between(self, date1: datetime, date2: datatime):
-		pass
+	def get_dirs_by_days(self, years:list= None, months: list= None, days:list= None):
+		month_paths = self.get_dirs_by_months(years, months)
+		return self.get_paths_by_basename(month_paths, days)
 
 	def get_file_content(self, start_date, end_date):
 		"""
