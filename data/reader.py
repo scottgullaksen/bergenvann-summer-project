@@ -8,6 +8,7 @@ logging.config.dictConfig(log_cfg)
 
 class PickledDataReader(object):
 	import os
+	import pickle
 	"""
 	Reader class that provides a convienent and fast API for accessing subsets
 	of the preproccesd data points located in the file structure indicated
@@ -45,27 +46,16 @@ class PickledDataReader(object):
 		year_paths = self.get_dirs_by_years(years)
 		return self.get_paths_by_basename(year_paths, months)
 
-	def get_dirs_by_days(self, years:list= None, months: list= None, days:list= None):
+	def get_file_paths(self, years:list= None, months: list= None, days:list= None):
 		month_paths = self.get_dirs_by_months(years, months)
 		return self.get_paths_by_basename(month_paths, days)
 
-	def get_file_content(self, start_date, end_date):
+	def get_file_content(self, years:list= None, months: list= None, days:list= None):
 		"""
-		Retrieves and returns the content of the files specified
-		by the date of their contents
 		"""
-		# Loop trhough all files
-		#	if start date encountered, yield file content
-		# 	break when end date passed
-		pass
-
-	def get_data(self, start_date, end_date, pump_time_step, weather_time_step):
-		"""
-		Return the the pump and weather data for each of the pump stations
-		within the specified time period and time step
-		"""
-		for content in self.get_file_content(start_date, end_date):
-			yield content[pump_time_step], content[weather_time_step]
+		for file_path in self.get_file_paths(years, months, days):
+			with open(file_path, 'rb') as f:
+				yield pickle.load(f)
 
 
 if __name__ == "__main__":
