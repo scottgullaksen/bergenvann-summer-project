@@ -4,6 +4,7 @@ from datetime import datetime
 import pickle
 
 class Preprocessor(object):
+	from util import abspath
 	"""
 	Wrapper for raw reader class. Preprocceses the files/datapoints, 
 	and creates and places into organised file structure. This is a convinient
@@ -23,15 +24,6 @@ class Preprocessor(object):
 		self.target = os.path.join(
 			os.path.dirname(os.path.abspath(__file__)), 'pickled_data'
 		) if not target_dir else target_dir
-
-
-	def abspath(self, date: datetime):
-		"""
-		Returns the absolute target file path for the specified date
-		"""
-		return os.path.normpath(
-			os.path.join(self.target, date.strftime('%Y/%m/%d') + '.pickle')
-		)
 
 	def save(self, target, data):
 		with open(target, 'wb') as f:
@@ -61,7 +53,7 @@ class Preprocessor(object):
 					# Save modified datastructure if not first time trough loop
 					if last_datapoint != None: self.save(target, data)
 
-					target = self.abspath(datapoint['date'])
+					target = abspath(self.target, datapoint['date'])
 
 					data = self.load(target)
 
