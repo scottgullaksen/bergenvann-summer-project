@@ -12,9 +12,14 @@ class PickledDataReader(object):
 			os.path.dirname(__file__), 'pickled_data'
 		)
 
-	def get_available_years(self):
-		return next(os.walk(self.path))[0]
+	def get_available_years(self): return os.listdir(self.path)
 
+	def get_dirs_by_years(self, years: list= None):
+		years = self.get_available_years() if not years else years
+		if not set(years).issubset(set(self.get_available_years())):
+			raise ValueError('some of the years specified does not have a path')
+		return [ os.path.join(self.path, dirname) for dirname in years ]
+		
 	def get_file_content(self, start_date, end_date):
 		"""
 		Retrieves and returns the content of the files specified
