@@ -1,3 +1,11 @@
+import logging
+import yaml
+
+with open('./logging.yaml', 'r') as f:
+	log_cfg = yaml.safe_load(f.read())
+
+logging.config.dictConfig(log_cfg)
+
 class PickledDataReader(object):
 	import os
 	"""
@@ -6,6 +14,9 @@ class PickledDataReader(object):
 	by the variable "path". 
 	"""
 	def __init__(self, path= None):
+
+		self.logger = logging.getLogger('dev')
+		self.logger.setLevel(logging.INFO)
 
 		# Path to processed file directory
 		self.path = os.path.join(
@@ -19,7 +30,22 @@ class PickledDataReader(object):
 		if not set(years).issubset(set(self.get_available_years())):
 			raise ValueError('some of the years specified does not have a path')
 		return [ os.path.join(self.path, dirname) for dirname in years ]
-		
+
+	def get_dirs_by_months(self, years:list= None, months: list = None):
+		year_paths = self.get_dirs_by_years(years)
+		all_month_paths = [
+			os.path.join(year_path, month)
+			for year_path in year_paths for month in os.listdir(year_path)  # Flattens
+		]
+		if not months: return all_month_paths
+		for m in months:
+			if o
+
+
+
+	def get_dirs_to_months_between(self, date1: datetime, date2: datatime):
+		pass
+
 	def get_file_content(self, start_date, end_date):
 		"""
 		Retrieves and returns the content of the files specified
