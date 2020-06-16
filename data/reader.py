@@ -27,9 +27,12 @@ class PickledDataReader(object):
 
 	def get_dirs_by_years(self, years: list= None):
 		years = self.get_available_years() if not years else years
-		if not set(years).issubset(set(self.get_available_years())):
-			raise ValueError('some of the years specified does not have a path')
-		return [ os.path.join(self.path, dirname) for dirname in years ]
+		for dirname in years:
+			year_path = os.path.join(self.path, dirname)
+			if os.path.exists(year_path):
+				yield year_path
+			else:
+				self.logger.warning(f'the provided year {dirname} does not have a path')
 
 	def get_dirs_by_months(self, years:list= None, months: list = None):
 		year_paths = self.get_dirs_by_years(years)
@@ -38,10 +41,12 @@ class PickledDataReader(object):
 			for year_path in year_paths for month in os.listdir(year_path)  # Flattens
 		]
 		if not months: return all_month_paths
-		for m in months:
-			if o
-
-
+		for month_path in all_month_paths:
+			for month in months:
+				if os.path.basename(month_path) == month:
+					yield month_path
+				else:
+					self.logger.warning(f'the provided month {month} did not match any path')
 
 	def get_dirs_to_months_between(self, date1: datetime, date2: datatime):
 		pass
