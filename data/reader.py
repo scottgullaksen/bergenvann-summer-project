@@ -1,5 +1,10 @@
 import logging
+import logging.config
 import yaml
+import os
+import pickle
+from datetime import datetime, timedelta
+from util import abspath, find_first_filepath, find_last_filepath, path_to_date
 
 with open('./logging.yaml', 'r') as f:
 	log_cfg = yaml.safe_load(f.read())
@@ -7,10 +12,6 @@ with open('./logging.yaml', 'r') as f:
 logging.config.dictConfig(log_cfg)
 
 class PickledDataReader(object):
-	import os
-	import pickle
-	from datetime import datetime
-	from util import abspath, find_first_filepath, path_to_date, find_last_filepath
 	"""
 	Reader class that provides a convienent and fast API for accessing subsets
 	of the preproccesd data points located in the file structure indicated
@@ -22,22 +23,25 @@ class PickledDataReader(object):
 		self.logger.setLevel(logging.INFO)
 
 		# Path to processed file directory
-		self.path = os.path.join(
-			os.path.dirname(__file__), 'pickled_data'
+		self.path = os.path.normpath(
+			os.path.join(
+				os.path.dirname(__file__), 'pickled_data'
+			)
 		)
 
 	def get_paths_by_basename(self, paths: list, basenames: list = None):
 		"""
-		Returns all paths to basenames relative paths if they exist
+		Generator of all paths to basenames relative paths if they exist
 		"""
-		all_paths = [
+		all_paths = (
 			os.path.join(path, basename)
-			for path in paths for basename in os.listdir(basenames)  # Flattens
-		]
-		if not basenames: return all_paths
-		for path in all_paths:
-			if os.path.basename(path) in basenames:
-				yield path
+			for path in paths for basename in os.listdir(path)  # Flattens
+		)
+		if basenames is None: return all_paths
+		return (
+			path for path in all_paths
+			if os.path.splitext(os.path.basename(path))[0] in basenames
+		)
 			
 
 	def get_available_years(self): return os.listdir(self.path)
@@ -66,7 +70,7 @@ class PickledDataReader(object):
 		"""
 		return self.get_file_content(self.get_file_paths_by_ranges(years, months, days))
 
-	def get_data_by_year_range(self, first_year: string, last_year: string):
+	def get_data_by_year_range(self, first_year: str, last_year: str):
 		"""
 		Returns all file content belonging to the range of years specified.
 		"""
@@ -111,25 +115,30 @@ class PickledDataReader(object):
 		
 		paths_between_dates = [
 			abspath(self.path, date) for date in [
-				(date2 - datetime.timedelta(x)) for x in range((date2 - date1).days)
+				(date2 - timedelta(x)) for x in range((date2 - date1).days + 1)
 			]
 		]
 
 		return self.get_file_content(paths_between_dates)
 
 if __name__ == "__main__":
-	import os
-	import pickle
+	reader = PickledDataReader()
 
-	pickle_files = [
-		os.path.join(root, name)
-		for root, dir_, files in os.walk(os.path.join(os.path.dirname(__file__), 'pickled_data'))
-		for name in files
-	]
+	print(f'available years: {reader.get_available_years()}')
 
-	idx = len(pickle_files) // 2
+	print(f'dirs to years {list(reader.get_dirs_by_years())}')
 
-	with open(pickle_files[-100], 'rb') as f:
-		print(pickle_files[-100])
-		data = pickle.load(f)
-		print(data['hours']['vaerdata'])
+	month_paths = list(reader.get_dirs_by_months(years=['2010', '2018']))
+
+	print(f'dirs to months {month_paths}')
+
+	day_paths = list(reader.get_file_paths_by_ranges(years=['2010', '2018'], months= ['09'], days= ['12', '15']))
+
+	print(f'dirs to days {day_paths}')
+
+	date1 = datetime(2015, 1, 24)
+	date2 = datetime(2015, 1, 25)
+
+	for idx, data in enumerate(reader.get_data_between_dates(date1, date2)):
+		print(f'{idx} :')
+		print(data)
