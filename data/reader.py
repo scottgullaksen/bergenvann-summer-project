@@ -29,7 +29,7 @@ class PickledDataReader(object):
 			)
 		)
 
-	def get_paths_by_basename(self, paths: list, basenames: list = None):
+	def __get_paths_by_basename(self, paths: list, basenames: list = None):
 		"""
 		Generator of all paths to basenames relative paths if they exist
 		"""
@@ -46,16 +46,16 @@ class PickledDataReader(object):
 
 	def get_available_years(self): return os.listdir(self.path)
 
-	def get_dirs_by_years(self, years: list= None):
-		return self.get_paths_by_basename([self.path], years)
+	def __get_dirs_by_years(self, years: list= None):
+		return self.__get_paths_by_basename([self.path], years)
 
-	def get_dirs_by_months(self, years:list= None, months: list = None):
-		year_paths = self.get_dirs_by_years(years)
-		return self.get_paths_by_basename(year_paths, months)
+	def __get_dirs_by_months(self, years:list= None, months: list = None):
+		year_paths = self.__get_dirs_by_years(years)
+		return self.__get_paths_by_basename(year_paths, months)
 
-	def get_file_paths_by_ranges(self, years:list= None, months: list= None, days:list= None):
-		month_paths = self.get_dirs_by_months(years, months)
-		return self.get_paths_by_basename(month_paths, days)
+	def __get_file_paths_by_ranges(self, years:list= None, months: list= None, days:list= None):
+		month_paths = self.__get_dirs_by_months(years, months)
+		return self.__get_paths_by_basename(month_paths, days)
 
 	def get_file_content(self, paths: list):
 		for file_path in paths:
@@ -68,7 +68,7 @@ class PickledDataReader(object):
 		years, months and days specified. If a parameter is not specified, the entire
 		available range will be used.
 		"""
-		return self.get_file_content(self.get_file_paths_by_ranges(years, months, days))
+		return self.get_file_content(self.__get_file_paths_by_ranges(years, months, days))
 
 	def get_data_by_year_range(self, first_year: str, last_year: str):
 		"""
@@ -128,11 +128,11 @@ if __name__ == "__main__":
 
 	print(f'dirs to years {list(reader.get_dirs_by_years())}')
 
-	month_paths = list(reader.get_dirs_by_months(years=['2010', '2018']))
+	month_paths = list(reader.__get_dirs_by_months(years=['2010', '2018']))
 
 	print(f'dirs to months {month_paths}')
 
-	day_paths = list(reader.get_file_paths_by_ranges(years=['2010', '2018'], months= ['09'], days= ['12', '15']))
+	day_paths = list(reader.__get_file_paths_by_ranges(years=['2010', '2018'], months= ['09'], days= ['12', '15']))
 
 	print(f'dirs to days {day_paths}')
 

@@ -22,6 +22,17 @@ def to_dataframes(day_iterator):
 				dict_result[station] = data
 			else:
 				for measurement in dict_result[station]:
+					# Extend the measurement at the station with measurement of next day
 					dict_result[station][measurement].extend(data[measurement])
 
 	return { station: pd.DataFrame(meas) for station, meas in dict_result.items() }
+
+
+if __name__ == "__main__":
+	from data.reader import PickledDataReader
+
+	reader = PickledDataReader()
+	
+	date1 = datetime(2015, 1, 24)
+	date2 = datetime(2015, 1, 25)
+
