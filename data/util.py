@@ -18,9 +18,16 @@ def find_first_filepath(path: os.path):
 def find_last_filepath(path):
 	if os.path.isfile(path):
 		return path
-	return find_last_filepath(os.path.join(path, max(os.listdir(path), lambda c: int(c))))
+	return find_last_filepath(
+		os.path.join(
+			path,
+			max(os.listdir(path), key= lambda c: int(c) if c.isnumeric() else int(
+				os.path.splitext(c)[0]
+			))
+		)
+	)
 
 def path_to_date(relpath, path):
 	return datetime.strptime(
-		os.path.splitext(os.path.relpath(relpath, path), '%Y/%m/%d')
+		os.path.splitext(os.path.relpath(path, relpath))[0], '%Y\\%m\\%d'
 	)

@@ -29,116 +29,98 @@ class PickledDataReader(object):
 			)
 		)
 
-	def __get_paths_by_basename(self, paths: list, basenames: list = None):
-		"""
-		Generator of all paths to basenames relative paths if they exist
-		"""
-		all_paths = (
-			os.path.join(path, basename)
-			for path in paths for basename in os.listdir(path)  # Flattens
-		)
-		if basenames is None: return all_paths
-		return (
-			path for path in all_paths
-			if os.path.splitext(os.path.basename(path))[0] in basenames
-		)
-			
-
 	def get_available_years(self): return os.listdir(self.path)
 
-	def __get_dirs_by_years(self, years: list= None):
-		return self.__get_paths_by_basename([self.path], years)
+	def __resolve_dates(self, date1: datetime, date2: datetime):
+		if not date1 or not os.path.exists(abspath(self.path, date1)):
+			path = find_first_filepath(self.path)
+			self.logger.warning(f'Too early/no date specified ({date1}) - no path found. Using earliest file insted {path}')
+			date1 = path_to_date(self.path, path)
 
-	def __get_dirs_by_months(self, years:list= None, months: list = None):
-		year_paths = self.__get_dirs_by_years(years)
-		return self.__get_paths_by_basename(year_paths, months)
+		if not date2 or not os.path.exists(abspath(self.path, date2)):
+			path = find_last_filepath(self.path)
+			self.logger.warning(f'Too late/no date specified ({date2}) - no path found. Using earliest file insted {path}')
+			date2 =  path_to_date(self.path, path)
+		return date1, date2
 
-	def __get_file_paths_by_ranges(self, years:list= None, months: list= None, days:list= None):
-		month_paths = self.__get_dirs_by_months(years, months)
-		return self.__get_paths_by_basename(month_paths, days)
+	def __combine_path(self, path1, path2):
+		p1_tail = os.path.relpath(path1, self.path)
+		p2_tail = os.path.relpath(path2, self.path)
+
+		p1_parts = os.path.normpath(p1_tail).split(os.path.sep)
+		p2_parts = os.path.normpath(p2_tail).split(os.path.sep)
+		p2_parts = p2_parts[len(p1_parts):] if len(p2_parts) > len(p1_parts) else []
+		return os.path.join(self.path, *p1_parts, *p2_parts)
+
+
+	def __get_paths_by_basename(self, paths: list, basenames: list, date1: datetime, date2: datetime):
+		"""
+		Generates paths to basenames relative to paths between specified dates.
+
+		If basenames is None, generates paths to all subdirs under paths.
+
+		If both dates is None, generates from all time periods.
+		"""
+		date1, date2 = self.__resolve_dates(date1, date2)
+
+		path1 = abspath(self.path, date1)
+		path2 = abspath(self.path, date2)
+
+		for path in paths:
+			for basename in os.listdir(path):
+				# Construct new path to subdirs
+				new_path = os.path.join(path, basename)
+
+				# If basename not specified, yield all paths to subdirs
+				# else yield the ones specified in basenames
+				if not basenames or os.path.splitext(os.path.basename(new_path))[0] in basenames:
+					if all([  # Check if new path lies between dates before yielding
+						date1 <= path_to_date(
+							self.path,
+							self.__combine_path(new_path, path1)
+						),
+						date2 >= path_to_date(
+							self.path,
+							self.__combine_path(new_path, path2)
+						)
+					]):
+						yield new_path
 
 	def get_file_content(self, paths: list):
 		for file_path in paths:
 			with open(file_path, 'rb') as f:
 				yield pickle.load(f)
 
-	def get_file_content_by_ranges(self, years:list= None, months: list= None, days:list= None):
+	def get_data(self, date1: datetime= None, date2: datetime= None, years:list= None, months: list= None, days:list= None):
 		"""
-		Returns a generator of file content belonging to the ranges of 
-		years, months and days specified. If a parameter is not specified, the entire
-		available range will be used.
-		"""
-		return self.get_file_content(self.__get_file_paths_by_ranges(years, months, days))
+		Generates all contentes af all files specified by the arguments:
 
-	def get_data_by_year_range(self, first_year: str, last_year: str):
-		"""
-		Returns all file content belonging to the range of years specified.
-		"""
-		year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
-		return self.get_file_content_by_ranges(year_range)
-
-	def get_data_by_month_range(self, first_month, second_month):
-		"""
-		Returns all file content from all years, but within the specified month range.
-		"""
-		month_range = [
-			f'0{i}' if i < 10 else str(i)
-			for i in range(int(first_month), int(second_month))
-		]
-		return self.get_file_content_by_ranges(months=month_range)
-
-	def get_data_by_day_range(self, first_day, second_day):
-		"""
-		Returns all file content from all years and months,
-		but within the specified day range.
-		"""
-		day_range = [
-			f'0{i}' if i < 10 else str(i)
-			for i in range(int(first_day), int(second_day))
-		]
-		return self.get_file_content_by_ranges(days=day_range)
-
-	def get_data_between_dates(self, date1: datetime, date2: datetime):
-		"""
-		Returns data from files with content belonging between the specified dates
-		"""
-		if not os.path.exists(abspath(self.path, date1)):
-			path = find_first_filepath(self.path)
-			self.logger.warning(f'Too early date specified ({date1}) - no path found. Using earliest file insted {path}')
-			date1 = path_to_date(self.path, path)
-
-		if not os.path.exists(abspath(self.path, date2)):
-			path = find_last_filepath(self.path)
-			self.logger.warning(f'Too late date specified ({date2}) - no path found. Using earliest file insted {path}')
-			date2 =  path_to_date(self.path, path)
-
+		Args:
+			date1, date2: Yields contents between these. Unspecified yields from first date available to last
+			years, months, days: Specify a list of years, months and days you would 
+				like to see content from between date1 and date2.
+				Unspecified yields everything available from that time period
 		
-		paths_between_dates = [
-			abspath(self.path, date) for date in [
-				(date2 - timedelta(x)) for x in range((date2 - date1).days + 1)
-			]
-		]
+		Example:
+			get_data(date1= date, years= ['2011]) yields all contents from date1 only in 2011
+		"""
 
-		return self.get_file_content(paths_between_dates)
+		# Find all relevant paths
+		paths = [self.path]
+		for time_periods in [years, months, days]:
+			paths = self.__get_paths_by_basename(paths, time_periods, date1, date2)
+
+		return self.get_file_content(paths)
+
 
 if __name__ == "__main__":
 	reader = PickledDataReader()
 
 	print(f'available years: {reader.get_available_years()}')
 
-	print(f'dirs to years {list(reader.get_dirs_by_years())}')
-
-	month_paths = list(reader.__get_dirs_by_months(years=['2010', '2018']))
-
-	print(f'dirs to months {month_paths}')
-
-	day_paths = list(reader.__get_file_paths_by_ranges(years=['2010', '2018'], months= ['09'], days= ['12', '15']))
-
-	print(f'dirs to days {day_paths}')
-
 	date1 = datetime(2015, 1, 24)
-	date2 = datetime(2015, 1, 25)
+	date2 = datetime(2015, 1, 24)
 
-	for idx, data in enumerate(reader.get_data_between_dates(date1, date2)):
+	for idx, data in enumerate(reader.get_data(date1, years= ['2016'], days= ['07', '08'])):
 		print(f'{idx} :')
 		print(data)
