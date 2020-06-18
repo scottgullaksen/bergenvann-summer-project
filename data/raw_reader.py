@@ -12,13 +12,18 @@ logging.config.dictConfig(log_cfg)
 
 class CSVFileReader(object):
 	"""
+	Reades all csv files under path.
+
+	Args:
+		path: if not specified, creates relative path to ..this_file/raw_data
+
 	Thought to self: Make this an interface/abstract class?
 	Specify required input to preprocessor class -> Should either
 	do cleaning here or specify a cleaning (lambda) function to be used in
 	preprocessor
 	"""
 
-	def __init__(self, path= None):
+	def __init__(self, path: os.path = None):
 
 		self.logger = logging.getLogger('dev')
 		self.logger.setLevel(logging.INFO)
@@ -35,7 +40,7 @@ class CSVFileReader(object):
 			os.path.join(os.path.abspath(dirpath), filename)
 			for dirpath, dirnames, filenames in os.walk(self.root)
 			for filename in filenames if os.path.splitext(filename)[1] == '.csv'
-		] if os.path.isdir(self.root) else [self.root]
+		] if os.path.isdir(self.root) else [self.root]  # use filter function instead
 
 		self.logger.info(f'csv files found: {list(map( lambda f: os.path.basename(f), self.paths))}')
 

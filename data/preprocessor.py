@@ -12,9 +12,12 @@ class Preprocessor(object):
 	the data such as aggregation, frequency analysis, etc. 
 
 	Args:
-		reader (object): The reader object to be wrapped. Provides reading capabilities to the dataset 
+		reader (object): The reader object to be wrapped. Provides reading capabilities to the dataset
+
+		target_dir: path to directory where preprocessed files will be placed. If not
+		specified it will create one in the same dir as this module.
 	"""
-	def __init__(self, reader, target_dir= None):
+	def __init__(self, reader, target_dir: os.path= None):
 
 		self.logger = logging.getLogger('dev')
 		self.logger.setLevel(logging.INFO)
@@ -41,6 +44,15 @@ class Preprocessor(object):
 
 	def transform(self, pickle_keys: list):
 		"""
+		Places all datapoints read from reader into files given by the path:
+		target_dir/[year]/[month]/[day].pickle
+
+		The file is pickled dictionary with pickle_keys as keys
+
+		Args:
+			pickle_keys: Must be a filename or directory on the path to the
+			raw dataset. Distributes the datapoints under that directory/file in the 
+			corresponding pickled date dictionary stored under the pickle key.
 		"""
 		last_datapoint = None
 
@@ -67,6 +79,7 @@ class Preprocessor(object):
 
 		self.save(target, data)
 
+# Run to create pickled, preprocessed data folder
 if __name__ == "__main__":
 	from raw_reader import CSVFileReader
 	from util import keys

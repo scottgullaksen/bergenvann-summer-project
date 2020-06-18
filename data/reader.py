@@ -112,6 +112,7 @@ class PickledDataReader(object):
 		return self.get_file_content(paths)
 
 
+# For testing
 if __name__ == "__main__":
 	reader = PickledDataReader()
 
