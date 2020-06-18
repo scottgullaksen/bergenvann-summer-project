@@ -2,3 +2,4 @@
 .log
 pickled_data/
 __pycache__/
+*.pyc

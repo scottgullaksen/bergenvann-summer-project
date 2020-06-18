@@ -42,35 +42,38 @@ class CSVFileReader(object):
 		if len(self.paths) == 0:
 			raise ValueError("The provided directory/file contained no csv files")
 
-	def clean_pump_data(self, raw_data):
+	def read_clean_pump_data(self, f):
 		"""
-		Filters rows that contain actual data and cleans them
+		Generates cleaned rows from the file specified
 		"""
-		try:
-			datapoint = {
-			'date': datetime.strptime(raw_data[0], '%Y-%m-%d %H:%M'),
-			'quantity (l/s)': float(raw_data[2].replace(',', '.')),
-			'level (m)': float(raw_data[4].replace(',', '.'))
-		}
-		except Exception as e:
-			self.logger.info(f'raw data: {raw_data} could not be dealt with')
-			datapoint = None
-		return datapoint
+		dataset = csv.reader(f, delimiter= '\t')
+		for row in dataset:
+			try:
+				yield {
+				'date': datetime.strptime(row[0], '%Y-%m-%d %H:%M'),
+				'quantity (l/s)': float(row[2].replace(',', '.')),
+				'level (m)': float(row[4].replace(',', '.'))
+			}
+			except Exception as e:
+				self.logger.info(f'raw data: {row} could not be dealt with')
 
 
-	def clean_weather_data(self, raw_data):
-		try:
-		 datepoint = {
-			'date': datetime.strptime(raw_data[2], '%d.%m.%Y %H:%M'),
-			'temp (C)': float(raw_data[-2].replace(',', '.'))
-				if any(c.isnumeric() for c in raw_data[-2]) else None,
-			'precipitation (mm)': float(raw_data[-1].replace(',', '.'))
-				if any(c.isnumeric() for c in raw_data[-1]) else 0.0
-		}
-		except Exception as e:
-			self.logger.warning(f'raw data: {raw_data} could not be dealt with')
-			datepoint = None
-		return datepoint
+	def read_cleaned_weather_data(self, f):
+		"""
+		Generates cleaned rows from the file specified
+		"""
+		dataset = csv.DictReader(f, delimiter= ';')
+		for row in dataset:
+			try:
+		 		yield {
+					'date': datetime.strptime(row['Tid(norsk normaltid)'], '%d.%m.%Y %H:%M'),
+					'temp (C)': float(row['Lufttemperatur'].replace(',', '.'))
+						if any(c.isnumeric() for c in row['Lufttemperatur']) else None,
+					'precipitation (mm)': float(row['NedbÃ¸r (1 t)'].replace(',', '.'))
+						if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else 0.0
+				}
+			except Exception as e:
+				self.logger.warning(f'raw data: {row} could not be dealt with')
 
 	def read_datapoints_from(self, dir_or_filename= None):
 		"""
@@ -82,18 +85,9 @@ class CSVFileReader(object):
 		for path in self.paths:
 			if dir_or_filename in path:  # Only return contents of relevant files
 				with open(path) as csvfile:
-					dataset = csv.reader(
-						csvfile,
-						delimiter= '\t' if (  # Choose delimiter based on content of file
-							csvfile.readline().count('\t') > csvfile.readline().count(';')
-						) else ';'
-					)
-					for row in dataset:
-
-						# Note to self: Make dictionary of cleaning functions if extend
-						cleaned = self.clean_pump_data(row) if 'pumpedata' in path else self.clean_weather_data(row)
-						if not cleaned: continue  # Not a data row
-						yield cleaned
+					cleaned = self.read_clean_pump_data(csvfile) if 'pumpedata' in path else self.read_cleaned_weather_data(csvfile)
+					for datapoint in cleaned:
+						yield datapoint
 
 if __name__ == '__main__':
 
@@ -101,7 +95,7 @@ if __name__ == '__main__':
 		os.path.dirname(os.path.abspath(__file__)), 'raw_data', 'vaerdata' , 'florida_01.01.11-31.12.13.csv'
 	)
 
-	reader = CSVFileReader(path)
+	reader = CSVFileReader()
 
 	counter = 0
 	for row in reader.read_datapoints_from():
