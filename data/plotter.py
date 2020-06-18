@@ -30,7 +30,7 @@ def to_dataframes(day_iterator):
 
 if __name__ == "__main__":
 	from reader import PickledDataReader
-	from datetime import datetime
+	from datetime import datetime, time
 	from util import *
 
 	reader = PickledDataReader()
@@ -39,11 +39,21 @@ if __name__ == "__main__":
 	date2 = datetime(2015, 1, 25)
 
 	df_dict = to_dataframes(reader.get_data(
-		years=string_range(2012, 2015),
-		months=string_range(5, 8)
+		#date1= date1
+		#date2= date2
+		months=string_range(7, 7),
+		#years=string_range(2012, 2018),
+		#days= string_range(1, 31),
 	))
+	time = time(12, 0, 0)
+	df = df_dict['vaerdata']
+
+	df = df[ df['date'].apply(lambda d: d.time()) > time ]
+
+	# Get statistics about summer day weather
+	print(df.describe())
 
 	for station, df in df_dict.items():
 
 		print(station)
-		print(df)
+		df.info()

@@ -59,10 +59,9 @@ class PickledDataReader(object):
 		p2_parts = p2_parts[len(p1_parts):] if len(p2_parts) > len(p1_parts) else []
 		return os.path.join(self.path, *p1_parts, *p2_parts)
 
-
-	def __get_paths_by_basename(self, paths: list, basenames: list, date1: datetime, date2: datetime):
+	def __get_paths_to_basenames(self, paths: list, basenames: list, date1: datetime, date2: datetime):
 		"""
-		Generates paths to basenames relative to paths between specified dates.
+		Generates paths to basenames relative to paths between specified dates (if they exist).
 
 		If basenames is None, generates paths to all subdirs under paths.
 
@@ -81,28 +80,11 @@ class PickledDataReader(object):
 				# If basename not specified, yield all paths to subdirs
 				# else yield the ones specified in basenames
 				if not basenames or os.path.splitext(os.path.basename(new_path))[0] in basenames:
-					if all([  # Check if new path lies between dates before yielding
-						date1 <= path_to_date(
-							self.path,
-							self.__combine_path(new_path, path1)
-						),
-						date2 >= path_to_date(
-							self.path,
-							self.__combine_path(new_path, path2)
-						)
-					]):
+					# Only yield if new path is between date1 and date2
+					if (date1 <= path_to_date(self.path, self.__combine_path(new_path, path1))
+					and
+					date2 >= path_to_date(self.path, self.__combine_path(new_path, path2))):
 						yield new_path
-
-	def __get_paths_between_dates(self, date1: datetime, date2: datetime):
-		"""
-		Returns paths to files with content belonging between the specified dates
-		"""
-		date1, date2 = self.__resolve_dates(date1, date2)
-		return [
-			abspath(self.path, date) for date in [
-				(date2 - timedelta(x)) for x in range((date2 - date1).days + 1)
-			]
-		]
 
 	def get_file_content(self, paths: list):
 		for file_path in paths:
@@ -122,11 +104,10 @@ class PickledDataReader(object):
 		Example:
 			get_data(date1= date, years= ['2011]) yields all contents from date1 only in 2011
 		"""
-
-		print('fast')
+		# Construct full paths
 		paths = [self.path]
 		for time_periods in [years, months, days]:
-			paths = self.__get_paths_by_basename(paths, time_periods, date1, date2)
+			paths = self.__get_paths_to_basenames(paths, time_periods, date1, date2)
 
 		return self.get_file_content(paths)
 
