@@ -2,9 +2,9 @@ import logging
 import os
 from datetime import datetime
 import pickle
+from util import abspath
 
 class Preprocessor(object):
-	from util import abspath
 	"""
 	Wrapper for raw reader class. Preprocceses the files/datapoints, 
 	and creates and places into organised file structure. This is a convinient
@@ -69,18 +69,10 @@ class Preprocessor(object):
 
 if __name__ == "__main__":
 	from raw_reader import CSVFileReader
+	from util import keys
 
 	csv_reader = CSVFileReader()
 
 	preprocessor = Preprocessor(reader=csv_reader)
-
-	keys = [
-		os.path.splitext(filename)[0]
-		for filename in os.listdir(
-			os.path.normpath(
-				os.path.join(os.path.dirname(__file__), 'raw_data/pumpedata') 
-			)
-		) if os.path.splitext(filename)[1] == '.csv'
-	] + ['vaerdata']
 
 	preprocessor.transform(pickle_keys=keys)

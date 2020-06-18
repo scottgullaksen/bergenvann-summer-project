@@ -32,6 +32,10 @@ class PickledDataReader(object):
 	def get_available_years(self): return os.listdir(self.path)
 
 	def __resolve_dates(self, date1: datetime, date2: datetime):
+		"""
+		Gives the provided dates a upper/minimum bound if not specified (is None)
+		or doesnt exist
+		"""
 		if not date1 or not os.path.exists(abspath(self.path, date1)):
 			path = find_first_filepath(self.path)
 			self.logger.warning(f'Too early/no date specified ({date1}) - no path found. Using earliest file insted {path}')
@@ -44,6 +48,9 @@ class PickledDataReader(object):
 		return date1, date2
 
 	def __combine_path(self, path1, path2):
+		"""
+		Replaces the first part of path2 with path1
+		"""
 		p1_tail = os.path.relpath(path1, self.path)
 		p2_tail = os.path.relpath(path2, self.path)
 
@@ -59,7 +66,7 @@ class PickledDataReader(object):
 
 		If basenames is None, generates paths to all subdirs under paths.
 
-		If both dates is None, generates from all time periods.
+		If both dates is None, generates from all dates avalable.
 		"""
 		date1, date2 = self.__resolve_dates(date1, date2)
 
@@ -86,6 +93,17 @@ class PickledDataReader(object):
 					]):
 						yield new_path
 
+	def __get_paths_between_dates(self, date1: datetime, date2: datetime):
+		"""
+		Returns paths to files with content belonging between the specified dates
+		"""
+		date1, date2 = self.__resolve_dates(date1, date2)
+		return [
+			abspath(self.path, date) for date in [
+				(date2 - timedelta(x)) for x in range((date2 - date1).days + 1)
+			]
+		]
+
 	def get_file_content(self, paths: list):
 		for file_path in paths:
 			with open(file_path, 'rb') as f:
@@ -105,7 +123,7 @@ class PickledDataReader(object):
 			get_data(date1= date, years= ['2011]) yields all contents from date1 only in 2011
 		"""
 
-		# Find all relevant paths
+		print('fast')
 		paths = [self.path]
 		for time_periods in [years, months, days]:
 			paths = self.__get_paths_by_basename(paths, time_periods, date1, date2)

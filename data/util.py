@@ -1,6 +1,15 @@
 from datetime import datetime, timedelta
 import os
 
+keys = [
+	os.path.splitext(filename)[0]
+	for filename in os.listdir(
+		os.path.normpath(
+			os.path.join(os.path.dirname(__file__), 'raw_data/pumpedata') 
+		)
+	) if os.path.splitext(filename)[1] == '.csv'
+] + ['vaerdata']
+
 def abspath(path, date: datetime):
 	"""
 	Returns the absolute target file path for the specified date 
@@ -26,6 +35,12 @@ def find_last_filepath(path):
 			))
 		)
 	)
+
+def string_range(first: int, last: int):
+	"""Create a string representation of the range"""
+	return [
+		f'0{i}' if i < 10 else str(i) for i in range(first, last + 1)
+	]
 
 def path_to_date(relpath, path):
 	return datetime.strptime(

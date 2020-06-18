@@ -29,10 +29,21 @@ def to_dataframes(day_iterator):
 
 
 if __name__ == "__main__":
-	from data.reader import PickledDataReader
+	from reader import PickledDataReader
+	from datetime import datetime
+	from util import *
 
 	reader = PickledDataReader()
 	
 	date1 = datetime(2015, 1, 24)
 	date2 = datetime(2015, 1, 25)
 
+	df_dict = to_dataframes(reader.get_data(
+		years=string_range(2012, 2015),
+		months=string_range(5, 8)
+	))
+
+	for station, df in df_dict.items():
+
+		print(station)
+		print(df)
