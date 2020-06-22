@@ -4,7 +4,7 @@ import yaml
 import os
 import pickle
 from datetime import datetime, timedelta
-from ..util import abspath, find_first_filepath, find_last_filepath
+from util import abspath, find_first_filepath, find_last_filepath
 
 
 with open('./logging.yaml', 'r') as f:
@@ -43,12 +43,12 @@ class PickledDataReader(object):
 		if not date1 or not os.path.exists(abspath(self.path, date1)):
 			path = find_first_filepath(self.path)
 			self.logger.warning(f'Too early/no date specified ({date1}) - no path found. Using earliest file insted {path}')
-			date1 = path_to_date(self.path, path)
+			date1 = self.__path_to_date(path)
 
 		if not date2 or not os.path.exists(abspath(self.path, date2)):
 			path = find_last_filepath(self.path)
 			self.logger.warning(f'Too late/no date specified ({date2}) - no path found. Using earliest file insted {path}')
-			date2 =  path_to_date(self.path, path)
+			date2 =  self.__path_to_date(path)
 		return date1, date2
 
 	def __combine_path(self, path1, path2):
@@ -85,9 +85,9 @@ class PickledDataReader(object):
 				# else yield the ones specified in basenames
 				if not basenames or os.path.splitext(os.path.basename(new_path))[0] in basenames:
 					# Only yield if new path is between date1 and date2
-					if (date1 <= path_to_date(self.path, self.__combine_path(new_path, path1))
+					if (date1 <= self.__path_to_date(self.__combine_path(new_path, path1))
 					and
-					date2 >= path_to_date(self.path, self.__combine_path(new_path, path2))):
+					date2 >= self.__path_to_date(self.__combine_path(new_path, path2))):
 						yield new_path
 
 	def __get_paths_between_dates(self, date1: datetime, date2: datetime):
@@ -100,26 +100,6 @@ class PickledDataReader(object):
 				(date2 - timedelta(x)) for x in range((date2 - date1).days + 1)
 			]
 		]
-
-	def __filter_weekdays(self, paths: list, wkds: list) -> list:
-		"""
-		Filters away the paths that don't correspond to the weekdays provided
-		"""
-		first_matches = []
-		for wd in wkds:
-			for path in paths:
-				date = path_to_date(path)
-				if date.isoweekday() == wd:
-					first_matches.append(date)
-					break
-		
-		def matches_one_of_weekdays(path):
-			date1 = path_to_date(self.path, path)
-			return  any(
-				date1 >= date2 and (date2 - date1).days % 7 == 0
-				for date2 in first_matches
-			)
-		return filter(matches_one_of_weekdays, paths)
 
 	def get_file_content(self, paths: list):
 		for file_path in paths:
@@ -149,10 +129,11 @@ class PickledDataReader(object):
 				paths = self.__get_paths_to_basenames(paths, time_periods, date1, date2)
 
 		# Filter, based on weekdays specified
-		if weekdays: paths = self.__filter_weekdays(paths, weekdays)
-
-		for path in paths:
-			print(path_to_date(self.path, path).isoweekday())
+		if weekdays:
+			paths = (
+				path for path in paths
+				if self.__path_to_date(path).isoweekday() in weekdays
+			)
 
 		return self.get_file_content(paths)
 
@@ -161,11 +142,10 @@ class PickledDataReader(object):
 if __name__ == "__main__":
 	reader = PickledDataReader()
 
-	print(f'available years: {reader.get_available_years()}')
-
 	date1 = datetime(2015, 1, 24)
 	date2 = datetime(2015, 1, 24)
 
-	for idx, data in enumerate(reader.get_data(date1, years= ['2016'], months=['01'])):
+	for idx, data in enumerate(reader.get_data(date1, years= ['2016'], months=['01', '02'], weekdays=[7])):
 		print(f'{idx} :')
 		print(data)
+		print(data['hours']['vaerdata']['date'][0].isoweekday())
