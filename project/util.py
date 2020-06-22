@@ -19,12 +19,12 @@ def abspath(path, date: datetime):
 		os.path.join(path, date.strftime('%Y/%m/%d') + '.pickle')
 	)
 
-def find_first_filepath(path: os.path):
+def find_first_filepath(path: os.path) -> os.path:
 	for dirpath, dirname, filenames in os.walk(path):
 		for filename in filenames:
 			return os.path.join(dirpath, filename)
 
-def find_last_filepath(path):
+def find_last_filepath(path: os.path) -> os.path:
 	if os.path.isfile(path):
 		return path
 	return find_last_filepath(
@@ -41,8 +41,3 @@ def string_range(first: int, last: int):
 	return [
 		f'0{i}' if i < 10 else str(i) for i in range(first, last + 1)
 	]
-
-def path_to_date(relpath, path):
-	return datetime.strptime(
-		os.path.splitext(os.path.relpath(path, relpath))[0], '%Y\\%m\\%d'
-	)

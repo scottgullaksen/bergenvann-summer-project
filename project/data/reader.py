@@ -4,7 +4,8 @@ import yaml
 import os
 import pickle
 from datetime import datetime, timedelta
-from util import abspath, find_first_filepath, find_last_filepath, path_to_date
+from ..util import abspath, find_first_filepath, find_last_filepath
+
 
 with open('./logging.yaml', 'r') as f:
 	log_cfg = yaml.safe_load(f.read())
@@ -29,7 +30,10 @@ class PickledDataReader(object):
 			)
 		)
 
-	def get_available_years(self): return os.listdir(self.path)
+	def __path_to_date(self, path) -> datetime:
+		return datetime.strptime(
+			os.path.splitext(os.path.relpath(path, self.path))[0], '%Y\\%m\\%d'
+		)
 
 	def __resolve_dates(self, date1: datetime, date2: datetime):
 		"""
@@ -97,12 +101,32 @@ class PickledDataReader(object):
 			]
 		]
 
+	def __filter_weekdays(self, paths: list, wkds: list) -> list:
+		"""
+		Filters away the paths that don't correspond to the weekdays provided
+		"""
+		first_matches = []
+		for wd in wkds:
+			for path in paths:
+				date = path_to_date(path)
+				if date.isoweekday() == wd:
+					first_matches.append(date)
+					break
+		
+		def matches_one_of_weekdays(path):
+			date1 = path_to_date(self.path, path)
+			return  any(
+				date1 >= date2 and (date2 - date1).days % 7 == 0
+				for date2 in first_matches
+			)
+		return filter(matches_one_of_weekdays, paths)
+
 	def get_file_content(self, paths: list):
 		for file_path in paths:
 			with open(file_path, 'rb') as f:
 				yield pickle.load(f)
 
-	def get_data(self, date1: datetime= None, date2: datetime= None, years:list= None, months: list= None, days:list= None):
+	def get_data(self, date1: datetime= None, date2: datetime= None, years:list= None, months: list= None, days:list= None, weekdays: list= []):
 		"""
 		Generates all contentes af all files specified by the arguments:
 
@@ -115,13 +139,20 @@ class PickledDataReader(object):
 		Example:
 			get_data(date1= date, years= ['2011]) yields all contents from date1 only in 2011
 		"""
-		if not any([years, months, days]):
+		if not any([years, months, days]):  # of these specified, just use date range to construct paths. Faster
+			print('called')
 			paths = self.__get_paths_between_dates(date1, date2)
 		else:
 			# Construct full paths
 			paths = [self.path]
 			for time_periods in [years, months, days]:
 				paths = self.__get_paths_to_basenames(paths, time_periods, date1, date2)
+
+		# Filter, based on weekdays specified
+		if weekdays: paths = self.__filter_weekdays(paths, weekdays)
+
+		for path in paths:
+			print(path_to_date(self.path, path).isoweekday())
 
 		return self.get_file_content(paths)
 
@@ -135,6 +166,6 @@ if __name__ == "__main__":
 	date1 = datetime(2015, 1, 24)
 	date2 = datetime(2015, 1, 24)
 
-	for idx, data in enumerate(reader.get_data(date1, years= ['2016'], days= ['07', '08'])):
+	for idx, data in enumerate(reader.get_data(date1, years= ['2016'], months=['01'])):
 		print(f'{idx} :')
 		print(data)
