@@ -37,17 +37,6 @@ def get_data_by_day_range(self, first_day, second_day):
 		)
 """
 
-	def __get_paths_between_dates(self, date1: datetime, date2: datetime):
-		"""
-		Returns paths to files with content belonging between the specified dates
-		"""
-		date1, date2 = self.__resolve_dates(date1, date2)
-		return [
-			abspath(self.path, date) for date in [
-				(date2 - timedelta(x)) for x in range((date2 - date1).days + 1)
-			]
-		]
-
 	def get_file_content_by_ranges(self, years:list= None, months: list= None, days:list= None):
 		"""
 		Returns a generator of file content belonging to the ranges of 

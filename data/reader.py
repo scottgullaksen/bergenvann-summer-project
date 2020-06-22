@@ -86,6 +86,17 @@ class PickledDataReader(object):
 					date2 >= path_to_date(self.path, self.__combine_path(new_path, path2))):
 						yield new_path
 
+	def __get_paths_between_dates(self, date1: datetime, date2: datetime):
+		"""
+		Returns paths to files with content belonging between the specified dates
+		"""
+		date1, date2 = self.__resolve_dates(date1, date2)
+		return [
+			abspath(self.path, date) for date in [
+				(date2 - timedelta(x)) for x in range((date2 - date1).days + 1)
+			]
+		]
+
 	def get_file_content(self, paths: list):
 		for file_path in paths:
 			with open(file_path, 'rb') as f:
@@ -104,10 +115,13 @@ class PickledDataReader(object):
 		Example:
 			get_data(date1= date, years= ['2011]) yields all contents from date1 only in 2011
 		"""
-		# Construct full paths
-		paths = [self.path]
-		for time_periods in [years, months, days]:
-			paths = self.__get_paths_to_basenames(paths, time_periods, date1, date2)
+		if not any([years, months, days]):
+			paths = self.__get_paths_between_dates(date1, date2)
+		else:
+			# Construct full paths
+			paths = [self.path]
+			for time_periods in [years, months, days]:
+				paths = self.__get_paths_to_basenames(paths, time_periods, date1, date2)
 
 		return self.get_file_content(paths)
 
