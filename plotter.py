@@ -55,7 +55,7 @@ def merge_stations(result: dict, stations: dict, left_df: pd.DataFrame= None):
 	Args:
 		result: dict of pandas dataframes
 		stations: dict of stations (str) (keys) to be included in plot and
-		the a list of the stations measurments to be shown as values
+		a list of the stations measurments(values) to be shown as
 	"""
 	if not stations: return left_df
 	right_key = list(stations.keys())[0]
@@ -73,17 +73,17 @@ def plot(df: pd.DataFrame):
 
 
 if __name__ == "__main__":
-	from reader import PickledDataReader
+	from data.reader import PickledDataReader
 	from util import *
 
 	reader = PickledDataReader()
 	
-	date1 = datetime(2015, 6, 24)
+	date1 = datetime(2020, 6, 1)
 	date2 = datetime(2015, 6, 25)
 
 	df_dict = to_dataframes(reader.get_data(
-		date1= date1,
-		date2= date2
+		date1= date1
+		#date2= date2
 		#months=string_range(7, 8),
 		#years=string_range(2012, 2018),
 		#days= string_range(1, 2),
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
 	description = {  # of what plot will show
 		'vaerdata': ['precipitation (mm)'],
-		'GeorgernesVerft': ['quantity (l/s)']
+		'ThorM߸hlensVilVite': ['quantity (l/s)']
 	}
 
 	df = merge_stations(df_dict, description)
