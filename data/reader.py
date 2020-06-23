@@ -4,7 +4,7 @@ import yaml
 import os
 import pickle
 from datetime import datetime, timedelta
-from util import abspath, find_first_filepath, find_last_filepath
+from util import abspath, find_first_filepath, find_last_filepath, keys
 
 
 with open('./logging.yaml', 'r') as f:
@@ -100,6 +100,12 @@ class PickledDataReader(object):
 				(date2 - timedelta(x)) for x in range((date2 - date1).days + 1)
 			]
 		]
+
+	def get_earliest_date(self): return self.__path_to_date(find_first_filepath())
+
+	def get_latest_date(self): return self.__path_to_date(find_last_filepath())
+
+	def get_stations(self): return keys  # Should change so reads from pickled corpus instead
 
 	def get_file_content(self, paths: list):
 		for file_path in paths:
