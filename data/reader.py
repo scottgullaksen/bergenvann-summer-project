@@ -4,7 +4,7 @@ import yaml
 import os
 import pickle
 from datetime import datetime, timedelta
-from util import abspath, find_first_filepath, find_last_filepath, keys
+from .util import abspath, find_first_filepath, find_last_filepath, keys
 
 
 with open('./logging.yaml', 'r') as f:
@@ -101,9 +101,9 @@ class PickledDataReader(object):
 			]
 		]
 
-	def get_earliest_date(self): return self.__path_to_date(find_first_filepath())
+	def get_earliest_date(self): return self.__path_to_date(find_first_filepath(self.path))
 
-	def get_latest_date(self): return self.__path_to_date(find_last_filepath())
+	def get_latest_date(self): return self.__path_to_date(find_last_filepath(self.path))
 
 	def get_available_years(self): return os.listdir(self.path)
 
