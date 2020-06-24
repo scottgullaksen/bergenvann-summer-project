@@ -105,6 +105,8 @@ class PickledDataReader(object):
 
 	def get_latest_date(self): return self.__path_to_date(find_last_filepath())
 
+	def get_available_years(self): return os.listdir(self.path)
+
 	def get_stations(self): return keys  # Should change so reads from pickled corpus instead
 
 	def get_file_content(self, paths: list):
