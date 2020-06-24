@@ -1,3 +1,8 @@
+
+import re
+import pandas as pd
+from datetime import datetime as dt
+
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -61,6 +66,7 @@ app.layout = html.Div([
 					{'label': 'minutes', 'value': 'm'},
 					{'label': 'days', 'value': 'd'}
 				],
+				value='h',
 				style={'display': 'flex'}
 			)
 		], style= {'display': 'flex', 'alignItems': 'center'}),
@@ -71,52 +77,82 @@ app.layout = html.Div([
 			placeholder= 'Velg stasjon...',
 			multi= True
 		),
-		
-		dcc.Checklist(
-			id= 'checklist-measurments',
-			options= [
-				{'label': 'quantity (l/s)', 'value': 'q'},
-				{'label': 'level (moh)', 'value': 'l'}
-			],
-			style= {'display':'flex'}
-		),
-		dcc.Checklist(
-			id='checklist-weather',
-			options=[
-				{'label': 'Inkluder værdata', 'value': 'vaerdata'},
-				{'label': 'nedbør (mm)', 'value': 'precipitation (mm)'},
-				{'label': 'temperatur (C)', 'value': 'temp (C)'},
-			],
-			style={'display': 'flex'}
-		),
+
+		html.Div([
+			dcc.Checklist(
+				id= 'checklist-pump-meas',
+				options= [
+					{'label': 'pumpemengde (l/s)', 'value': 'quantity (l/s)'},
+					{'label': 'nivå, sump (moh)', 'value': 'level (moh)'}
+				],
+				style= {'display':'flex'}
+			),
+			dcc.Checklist(
+				id= 'checklist-weather-meas',
+				options= [
+					{'label': 'nedbør (mm)', 'value': 'precipitation (mm)'},
+					{'label': 'temperatur (C)', 'value': 'temp (C)'}
+				],
+				style= {'display':'flex'}
+			)
+		], style= {'display': 'flex'})
+
 	] + [
 		html.Div([
 			PeriodSelection(vr, id) for id, vr in {
 			'years': reader.get_available_years(),
 			'months': string_range(1, 12),
 			'days': string_range(1, 31),
-			'weeks': range(8)
+			'weekdays': range(8)
 			}.items()
 		], style={'display': 'flex', 'justifyContent': 'space-around'})
+	] + [
+		dcc.Graph(id='graph')
 	])
 ])
 
-"""dcc.Graph(id='graph')
+
 @app.callback(
 	Output(component_id= 'graph', component_property= 'figure'),
-	[Input(component_id= 'dropdown-station', component_property= 'value')]
+	[Input(component_id= 'date-selector', component_property= 'start_date'),
+	Input(component_id= 'date-selector', component_property= 'end_date'),
+	Input(component_id= 'dropdown-station', component_property= 'value'),
+	Input(component_id= 'checklist-pump-meas', component_property= 'value'),
+	Input(component_id= 'checklist-weather-meas', component_property= 'value'),
+	Input(component_id= 'dropdown-years', component_property= 'value'),
+	Input(component_id= 'dropdown-months', component_property= 'value'),
+	Input(component_id= 'dropdown-days', component_property= 'value'),
+	Input(component_id= 'dropdown-weekdays', component_property= 'value')]
 )
-def update_graph(input_value):
-	print(input_value)
+def update_graph(date1, date2, stations, pump_meas, weather_meas,
+							years, months, days, weekdays):
+
+	if date1 is not None:
+		date1 = dt.strptime(re.split('T| ', date1)[0], '%Y-%m-%d')
+
+	if date2 is not None:
+		date2 = dt.strptime(re.split('T| ', date2)[0], '%Y-%m-%d')
+	# Create appropriate agrument for api call
+	print(stations)
+	print(pump_meas)
+	stations = {
+		**({s:pump_meas for s in stations}
+		if stations and pump_meas else {})
+	}
+	if weather_meas: stations['vaerdata'] = weather_meas
+
 	df = merge_stations(
-		result= to_dataframes(reader.get_data()),
-		stations={
-			station: (['precipitation (mm)']
-			if station== 'vaerdata'
-			else ['quantity (l/s)'])
-			for station in input_value
-		}
-	)
+		result= to_dataframes(reader.get_data(
+			date1=date1,
+			date2=date2,
+			years=years,
+			months=months,
+			days= days,
+			weekdays= [] if not weekdays else weekdays
+		)),
+		stations= stations
+	) if stations else pd.DataFrame()
+
 	return {
 		'data': [
 			dict(
@@ -131,7 +167,7 @@ def update_graph(input_value):
 		'layout': {
 			'title': 'Sensordata'
 		}
-	}"""
+	}
 
 if __name__ == '__main__':
 	app.run_server(debug=True)
