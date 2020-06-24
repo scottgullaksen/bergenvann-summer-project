@@ -57,7 +57,11 @@ def merge_stations(result: dict, stations: dict, left_df: pd.DataFrame= None):
 		stations: dict of stations (str) (keys) to be included in plot and
 		a list of the stations measurments(values) to be shown as
 	"""
-	if not stations: return left_df
+	if left_df is None:  # First stack call
+		stations = {  # Filter away stations not in result
+			s:v for s,v in stations.items() if s in result
+		}
+	if not stations: return left_df  # Base case
 	right_key = list(stations.keys())[0]
 	right_df = result[right_key][stations.pop(right_key)]
 	return merge_stations(

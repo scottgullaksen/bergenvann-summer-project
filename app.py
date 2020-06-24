@@ -83,7 +83,7 @@ app.layout = html.Div([
 				id= 'checklist-pump-meas',
 				options= [
 					{'label': 'pumpemengde (l/s)', 'value': 'quantity (l/s)'},
-					{'label': 'nivå, sump (moh)', 'value': 'level (moh)'}
+					{'label': 'nivå, sump (moh)', 'value': 'level (m)'}
 				],
 				style= {'display':'flex'}
 			),
@@ -152,6 +152,8 @@ def update_graph(date1, date2, stations, pump_meas, weather_meas,
 		)),
 		stations= stations
 	) if stations else pd.DataFrame()
+
+	if df is None: df = pd.DataFrame()
 
 	return {
 		'data': [
