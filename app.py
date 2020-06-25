@@ -178,7 +178,9 @@ def update_graph(date1, date2, stations, pump_meas, weather_meas,
 		],
 		'layout': {
 			'title': 'Sensordata',
-			'transition': {'duration': 500}
+			'transition': {'duration': 500},
+			'margin': {'l': 20, 'b': 20, 't': 40, 'r': 10},
+			'legend': {'x': 0.9, 'y': 1.2}
 		}
 	}
 
