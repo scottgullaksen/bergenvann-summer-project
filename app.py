@@ -177,10 +177,15 @@ def update_graph(date1, date2, stations, pump_meas, weather_meas,
 			) for col in df.columns
 		],
 		'layout': {
-			'title': 'Sensordata',
+			'title': {
+				'text': 'Sensordata',
+				'xanchor': 'center',
+				'xref': 'paper',
+				'y': 0.98
+			},
 			'transition': {'duration': 500},
-			'margin': {'l': 20, 'b': 20, 't': 40, 'r': 10},
-			'legend': {'x': 0.9, 'y': 1.2}
+			'margin': {'l': 20, 'b': 20, 't': 20, 'r': 10},
+			'legend': {'x': 0 , 'yref': 'paper', 'y': 1, 'xref': 'paper', 'bgcolor': 'rgba(0,0,0,0)'}
 		}
 	}
 
