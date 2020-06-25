@@ -107,13 +107,15 @@ app.layout = html.Div([
 			}.items()
 		], style={'display': 'flex', 'justifyContent': 'space-around'})
 	] + [
-		dcc.Graph(id='graph')
+		dcc.Graph(id='graph'),
+		html.Div( id= 'statistics')
 	])
 ])
 
 
 @app.callback(
-	Output(component_id= 'graph', component_property= 'figure'),
+	[Output(component_id= 'graph', component_property= 'figure'),
+	Output(component_id= 'statistics', component_property= 'children')],
 	[Input(component_id= 'date-selector', component_property= 'start_date'),
 	Input(component_id= 'date-selector', component_property= 'end_date'),
 	Input(component_id= 'dropdown-station', component_property= 'value'),
@@ -127,14 +129,14 @@ app.layout = html.Div([
 def update_graph(date1, date2, stations, pump_meas, weather_meas,
 							years, months, days, weekdays):
 
+	# Convert to date objects
 	if date1 is not None:
 		date1 = dt.strptime(re.split('T| ', date1)[0], '%Y-%m-%d')
 
 	if date2 is not None:
 		date2 = dt.strptime(re.split('T| ', date2)[0], '%Y-%m-%d')
-	# Create appropriate agrument for api call
-	print(stations)
-	print(pump_meas)
+
+	# Create appropriate argument for api call
 	stations = {
 		**({s:pump_meas for s in stations}
 		if stations and pump_meas else {})
@@ -151,11 +153,19 @@ def update_graph(date1, date2, stations, pump_meas, weather_meas,
 			weekdays= [] if not weekdays else weekdays
 		)),
 		stations= stations
-	) if stations else pd.DataFrame()
+	) if stations else None
 
-	if df is None: df = pd.DataFrame()
+	if df is None:  # result from merge might also be None
+		df = pd.DataFrame()
+		stat_colums = []
+	else:
+		stats = df.agg({
+			col: ['mean', 'max', 'min', 'median', 'sum', 'std']
+			for col in df.columns
+		})
+		stat_colums = stats.columns
 
-	return {
+	figure = {
 		'data': [
 			dict(
 				x= df.index,
@@ -167,9 +177,21 @@ def update_graph(date1, date2, stations, pump_meas, weather_meas,
 			) for col in df.columns
 		],
 		'layout': {
-			'title': 'Sensordata'
+			'title': 'Sensordata',
+			'transition': {'duration': 500}
 		}
 	}
+
+	return figure, [
+		html.Div(
+			id=f'stat-{col}',
+			children= [html.H6(f'{col}')] + [
+				html.Div(f'{stat}: {stats.loc[stat, col]}')
+				for stat in stats.index
+			],
+			style={'display': 'inline-block', 'margin': '0% 2%'}
+		) for col in stat_colums
+	]
 
 if __name__ == '__main__':
 	app.run_server(debug=True)

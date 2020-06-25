@@ -27,7 +27,9 @@ def to_dataframes(day_iterator):
 	dict_of_df = {
 		station: pd.DataFrame(meas) for station, meas in dict_result.items()
 	}
-	for df in dict_of_df.values(): df.set_index('date', inplace= True)
+	for df in dict_of_df.values():
+		df.set_index('date', inplace= True)
+		df.sort_index(inplace= True)
 	return dict_of_df
 
 def get_summer_weather_stats():
