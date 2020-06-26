@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import pandas as pd
 import os
 
 keys = [
@@ -41,3 +42,27 @@ def string_range(first: int, last: int):
 	return [
 		f'0{i}' if i < 10 else str(i) for i in range(first, last + 1)
 	]
+
+
+def merge_stations(result: dict, stations: dict, left_df: pd.DataFrame= None):
+	"""
+	Merge all stations values
+
+	Args:
+		result: dict of pandas dataframes
+		stations: dict of stations (str) (keys) to be included in plot and
+		a list of the stations measurments(values) to be shown as
+	"""
+	if left_df is None:  # First stack call
+		stations = {  # Filter away stations not in result
+			s:v for s,v in stations.items() if s in result
+		}
+	if not stations: return left_df  # Base case
+	right_key = list(stations.keys())[0]
+	right_df = result[right_key][stations.pop(right_key)]
+	return merge_stations(
+		result= result,
+		left_df= pd.merge(left_df, right_df, how='outer', right_index= True, left_index= True)
+		if left_df is not None else right_df,
+		stations= stations
+	)

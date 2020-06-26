@@ -1,4 +1,3 @@
-
 import re
 import pandas as pd
 from datetime import datetime as dt
@@ -8,20 +7,13 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input
 
-from plotter import to_dataframes, merge_stations
 from data.reader import PickledDataReader
-from data.util import string_range
+from data.util import string_range, merge_stations
 
 reader = PickledDataReader()
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-styles = {
-	'selection-wrapper':{
-		'display': 'inline-block',
-		'width': '32%'
-	}
-}
 
 def PeriodSelection(value_range, id):
 	return html.Div([
@@ -52,24 +44,13 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div([
 	html.Div([
 
-		html.Div([
-			dcc.DatePickerRange(
-				id= 'date-selector',
-				max_date_allowed= reader.get_latest_date(),
-				min_date_allowed= reader.get_earliest_date(),
-				initial_visible_month= reader.get_latest_date()
-			),
-			dcc.RadioItems(
-				id= 'radio-timestep',
-				options= [
-					{'label': 'hours', 'value': 'h'},
-					{'label': 'minutes', 'value': 'm'},
-					{'label': 'days', 'value': 'd'}
-				],
-				value='h',
-				style={'display': 'flex'}
-			)
-		], style= {'display': 'flex', 'alignItems': 'center'}),
+		dcc.DatePickerRange(
+			id= 'date-selector',
+			max_date_allowed= reader.get_latest_date(),
+			min_date_allowed= reader.get_earliest_date(),
+			initial_visible_month= reader.get_latest_date(),
+			style= { 'borderStyle': 'none'}
+		),
 
 		dcc.Dropdown(
 			id= 'dropdown-station',
@@ -144,14 +125,14 @@ def update_graph(date1, date2, stations, pump_meas, weather_meas,
 	if weather_meas: stations['vaerdata'] = weather_meas
 
 	df = merge_stations(
-		result= to_dataframes(reader.get_data(
+		result= reader.get_data(
 			date1=date1,
 			date2=date2,
 			years=years,
 			months=months,
 			days= days,
 			weekdays= [] if not weekdays else weekdays
-		)),
+		),
 		stations= stations
 	) if stations else None
 

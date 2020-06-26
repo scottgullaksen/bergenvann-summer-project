@@ -3,6 +3,7 @@ import logging.config
 import yaml
 import os
 import pickle
+import pandas as pd
 from datetime import datetime, timedelta
 from .util import abspath, find_first_filepath, find_last_filepath, keys
 
@@ -101,6 +102,36 @@ class PickledDataReader(object):
 			]
 		]
 
+	def __as_dataframes(self, day_iterator):
+		"""
+		Args:
+			day_iterator: The generator/iterable returned from get_data
+
+		Returns:
+			A dict of dataframes corresponding to each station where the dataframe
+			holds the measurments for that station
+		"""
+
+		dict_result = {}
+
+		# day is dict of stations with measures for that day
+		for day in day_iterator:
+			for station, data in day['hours'].items():  # Data is dict of measurments
+				if station not in dict_result:
+					# Initilize the station to result with first dict of measurments
+					dict_result[station] = data
+				else:
+					for measurement in dict_result[station]:
+						# Extend the measurement at the station with measurement of next day
+						dict_result[station][measurement].extend(data[measurement])
+		dict_of_df = {
+			station: pd.DataFrame(meas) for station, meas in dict_result.items()
+		}
+		for df in dict_of_df.values():
+			df.set_index('date', inplace= True)
+			df.sort_index(inplace= True)
+		return dict_of_df
+
 	def get_earliest_date(self): return self.__path_to_date(find_first_filepath(self.path))
 
 	def get_latest_date(self): return self.__path_to_date(find_last_filepath(self.path))
@@ -114,7 +145,8 @@ class PickledDataReader(object):
 			with open(file_path, 'rb') as f:
 				yield pickle.load(f)
 
-	def get_data(self, date1: datetime= None, date2: datetime= None, years:list= None, months: list= None, days:list= None, weekdays: list= []):
+	def get_data(self, date1: datetime= None, date2: datetime= None, years:list= None,
+					months: list= None, days:list= None, weekdays: list= [], df= True):
 		"""
 		Generates all contentes af all files specified by the arguments:
 
@@ -143,7 +175,9 @@ class PickledDataReader(object):
 				if self.__path_to_date(path).isoweekday() in weekdays
 			)
 
-		return self.get_file_content(paths)
+		content = self.get_file_content(paths)
+
+		return self.__as_dataframes(content) if df else content
 
 
 # For testing
