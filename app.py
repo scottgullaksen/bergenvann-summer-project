@@ -24,14 +24,6 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div([
 	html.Div([
 
-		dcc.DatePickerRange(
-			id= 'date-selector',
-			max_date_allowed= reader.get_latest_date(),
-			min_date_allowed= reader.get_earliest_date(),
-			initial_visible_month= reader.get_latest_date(),
-			style= { 'borderStyle': 'none'}
-		),
-
 		dcc.Dropdown(
 			id= 'dropdown-station',
 			options=[ {'label': i, 'value': i} for i in reader.get_stations()],
@@ -56,9 +48,16 @@ app.layout = html.Div([
 				],
 				style= {'display':'flex'}
 			)
-		], style= {'display': 'flex'})
+		], style= {'display': 'flex'}),
 
-	] + [
+		dcc.DatePickerRange(
+			id= 'date-selector',
+			max_date_allowed= reader.get_latest_date(),
+			min_date_allowed= reader.get_earliest_date(),
+			initial_visible_month= reader.get_latest_date(),
+			style= { 'borderStyle': 'none'}
+		),
+
 		html.Div([
 			PeriodSelection(vr, id) for id, vr in {
 			'years': reader.get_available_years(),
@@ -66,10 +65,13 @@ app.layout = html.Div([
 			'days': string_range(1, 31),
 			'weekdays': range(8)
 			}.items()
-		], style={'display': 'flex', 'justifyContent': 'space-around'})
-	] + [
+		], style={'display': 'flex', 'justifyContent': 'space-around'}),
+
 		dcc.Graph(id='graph'),
+
 		html.Div( id= 'statistics'),
+
+		# state
 		html.Div(id= 'state-result', style={'display': 'none'}),
 		html.Div(id= 'state-merged-df', style={'display': 'none'})
 	])
