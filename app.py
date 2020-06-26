@@ -1,6 +1,7 @@
 import re
 import pandas as pd
 from datetime import datetime as dt
+import json
 
 import dash
 import dash_core_components as dcc
@@ -10,34 +11,13 @@ from dash.dependencies import Output, Input
 from data.reader import PickledDataReader
 from data.util import string_range, merge_stations
 
+from components import PeriodSelection, KeyStatistics
+from graph import create_figure
+
+
 reader = PickledDataReader()
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-
-def PeriodSelection(value_range, id):
-	return html.Div([
-
-		dcc.Dropdown(
-			id= f'dropdown-{id}',
-			options=[
-				{'label': i, 'value': i} for i in value_range
-			],
-			placeholder= id,
-			multi= True
-		),
-
-		dcc.Dropdown(
-			id= f'dropdown-{id}-agg',
-			placeholder='Slå sammen',
-			options=[
-				{'label': 'mean', 'value': 'mean'},
-				{'label': 'max', 'value': 'max'},
-				{'label': 'min', 'value': 'min'},
-				{'label': 'sum', 'value': 'sum'},
-			]
-		)
-	], style= {'width': '20%'})
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
@@ -89,35 +69,52 @@ app.layout = html.Div([
 		], style={'display': 'flex', 'justifyContent': 'space-around'})
 	] + [
 		dcc.Graph(id='graph'),
-		html.Div( id= 'statistics')
+		html.Div( id= 'statistics'),
+		html.Div(id= 'state-result', style={'display': 'none'}),
+		html.Div(id= 'state-merged-df', style={'display': 'none'})
 	])
 ])
 
+def resolve_dates(*args):
+	"""
+	If arguments are date strings, convert to dates, otherwise return None
+	"""
+	return tuple(
+		dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
+		if date is not None else date
+		for date in args
+	)
 
 @app.callback(
-	[Output(component_id= 'graph', component_property= 'figure'),
-	Output(component_id= 'statistics', component_property= 'children')],
-	[Input(component_id= 'date-selector', component_property= 'start_date'),
-	Input(component_id= 'date-selector', component_property= 'end_date'),
-	Input(component_id= 'dropdown-station', component_property= 'value'),
-	Input(component_id= 'checklist-pump-meas', component_property= 'value'),
-	Input(component_id= 'checklist-weather-meas', component_property= 'value'),
-	Input(component_id= 'dropdown-years', component_property= 'value'),
-	Input(component_id= 'dropdown-months', component_property= 'value'),
-	Input(component_id= 'dropdown-days', component_property= 'value'),
-	Input(component_id= 'dropdown-weekdays', component_property= 'value')]
-)
-def update_graph(date1, date2, stations, pump_meas, weather_meas,
-							years, months, days, weekdays):
+	Output('state-result', 'children'),[
+	Input('date-selector', 'start_date'),
+	Input('date-selector', 'end_date'),
+	Input('dropdown-years', 'value'),
+	Input('dropdown-months', 'value'),
+	Input('dropdown-days', 'value'),
+	Input('dropdown-weekdays', 'value')
+])
+def update_result(start_date, end_date, years, months, days, weekdays):
 
-	# Convert to date objects
-	if date1 is not None:
-		date1 = dt.strptime(re.split('T| ', date1)[0], '%Y-%m-%d')
+	start_date, end_date = resolve_dates(start_date, end_date)
 
-	if date2 is not None:
-		date2 = dt.strptime(re.split('T| ', date2)[0], '%Y-%m-%d')
+	dict_of_df = reader.get_data(start_date, end_date, years, months, days,
+						weekdays= [] if not weekdays else weekdays)
+	return json.dumps({
+		station: df.to_json(date_format='iso', orient='split')
+		for station, df in dict_of_df.items()
+	})
 
-	# Create appropriate argument for api call
+@app.callback(
+	Output('state-merged-df', 'children'), [
+	Input('dropdown-station', 'value'),
+	Input('checklist-pump-meas', 'value'),
+	Input('checklist-weather-meas', 'value'),
+	Input('state-result', 'children'),
+])
+def update_merged_df(stations, pump_meas, weather_meas, state):
+
+	# Create appropriate argument required by merge
 	stations = {
 		**({s:pump_meas for s in stations}
 		if stations and pump_meas else {})
@@ -125,61 +122,40 @@ def update_graph(date1, date2, stations, pump_meas, weather_meas,
 	if weather_meas: stations['vaerdata'] = weather_meas
 
 	df = merge_stations(
-		result= reader.get_data(
-			date1=date1,
-			date2=date2,
-			years=years,
-			months=months,
-			days= days,
-			weekdays= [] if not weekdays else weekdays
-		),
+		result= {  # Read from jsonified state
+			station: pd.read_json(jsond_df, orient= 'split')
+			for station, jsond_df in json.loads(state).items()
+		},
 		stations= stations
 	) if stations else None
 
-	if df is None:  # result from merge might also be None
-		df = pd.DataFrame()
-		stat_colums = []
-	else:
-		stats = df.agg({
-			col: ['mean', 'max', 'min', 'median', 'sum', 'std']
-			for col in df.columns
-		})
-		stat_colums = stats.columns
+	if df is None:
+		raise dash.exceptions.PreventUpdate(
+			'No stations/measurements specified, abort update'
+		)
 
-	figure = {
-		'data': [
-			dict(
-				x= df.index,
-				y= df[col],
-				mode= 'lines',
-				name= col,
-				type= 'scatter',
-				opacity= 0.7
-			) for col in df.columns
-		],
-		'layout': {
-			'title': {
-				'text': 'Sensordata',
-				'xanchor': 'center',
-				'xref': 'paper',
-				'y': 0.98
-			},
-			'transition': {'duration': 500},
-			'margin': {'l': 20, 'b': 20, 't': 20, 'r': 10},
-			'legend': {'x': 0 , 'yref': 'paper', 'y': 1, 'xref': 'paper', 'bgcolor': 'rgba(0,0,0,0)'}
-		}
-	}
+	print('return?')
 
-	return figure, [
-		html.Div(
-			id=f'stat-{col}',
-			children= [html.H6(f'{col}')] + [
-				html.Div(f'{stat}: {stats.loc[stat, col]}')
-				for stat in stats.index
-			],
-			style={'display': 'inline-block', 'margin': '0% 2%'}
-		) for col in stat_colums
-	]
+	return df.to_json(date_format='iso', orient='split')
+
+@app.callback(
+	[Output('graph', 'figure'), Output('statistics', 'children')],
+	[Input('state-merged-df', 'children')]
+)
+def update_graph(jsonified_df):
+	if jsonified_df is None:
+		raise dash.exceptions.PreventUpdate(
+			'First time trough callback chain - no graph render'
+		)
+
+	df = pd.read_json(jsonified_df, orient='split')
+
+	stats = df.agg({
+		col: ['mean', 'max', 'min', 'median', 'sum', 'std']
+		for col in df.columns
+	})
+
+	return create_figure(df), KeyStatistics(stats)
 
 if __name__ == '__main__':
 	app.run_server(debug=True)
