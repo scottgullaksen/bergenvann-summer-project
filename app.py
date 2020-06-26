@@ -12,7 +12,7 @@ from data.reader import PickledDataReader
 from data.util import string_range, merge_stations
 
 from components import PeriodSelection, KeyStatistics
-from graph import create_figure
+from util import create_figure, resolve_dates
 
 
 reader = PickledDataReader()
@@ -75,16 +75,6 @@ app.layout = html.Div([
 	])
 ])
 
-def resolve_dates(*args):
-	"""
-	If arguments are date strings, convert to dates, otherwise return None
-	"""
-	return tuple(
-		dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
-		if date is not None else date
-		for date in args
-	)
-
 @app.callback(
 	Output('state-result', 'children'),[
 	Input('date-selector', 'start_date'),
@@ -134,8 +124,6 @@ def update_merged_df(stations, pump_meas, weather_meas, state):
 			'No stations/measurements specified, abort update'
 		)
 
-	print('return?')
-
 	return df.to_json(date_format='iso', orient='split')
 
 @app.callback(
@@ -148,8 +136,10 @@ def update_graph(jsonified_df):
 			'First time trough callback chain - no graph render'
 		)
 
+	# To be shown in graph
 	df = pd.read_json(jsonified_df, orient='split')
 
+	# To be shown beneath graph
 	stats = df.agg({
 		col: ['mean', 'max', 'min', 'median', 'sum', 'std']
 		for col in df.columns

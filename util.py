@@ -22,3 +22,15 @@ def create_figure(df):
 			'legend': {'x': 0 , 'yref': 'paper', 'y': 1, 'xref': 'paper', 'bgcolor': 'rgba(0,0,0,0)'}
 		}
 	}
+
+def resolve_dates(*args):
+	import re
+	from datetime import datetime as dt
+	"""
+	If arguments are date strings, convert to dates, otherwise return None
+	"""
+	return tuple(
+		dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
+		if date is not None else date
+		for date in args
+	)
