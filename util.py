@@ -34,3 +34,13 @@ def resolve_dates(*args):
 		if date is not None else date
 		for date in args
 	)
+
+def filter_by_hours(df, hour_ints):
+	"""Filter date indexed df by the hours (ints) in hour_ints"""
+	from datetime import time
+	first, last = tuple(map(time, hour_ints))
+	if first.hour != 0:
+		df = df[first <= df.index.map(lambda d: d.time())]
+	if last.hour != 23:
+		df = df[df.index.map(lambda d: d.time()) <= last]
+	return df

@@ -1,9 +1,27 @@
 import dash_core_components as dcc
 import dash_html_components as html
 
-def PeriodSelection(value_range, id):
-	return html.Div([
+def AggregationDropdown(id: str):
+	"""Dropdown menu for aggregation methods"""
+	return dcc.Dropdown(
+		id= f'dropdown-{id}-agg',
+		placeholder='Slå sammen',
+		options=[
+			{'label': 'mean', 'value': 'mean'},
+			{'label': 'max', 'value': 'max'},
+			{'label': 'min', 'value': 'min'},
+			{'label': 'sum', 'value': 'sum'},
+		]
+	)
 
+def PeriodSelection(value_range, id):
+	"""
+	Creates a vertical stack of two dropdown menus.
+	Top one holds the range of values for selection
+	and bottom one choose aggregation method for
+	the selected values
+	"""
+	return html.Div([
 		dcc.Dropdown(
 			id= f'dropdown-{id}',
 			options=[
@@ -12,20 +30,14 @@ def PeriodSelection(value_range, id):
 			placeholder= id,
 			multi= True
 		),
-
-		dcc.Dropdown(
-			id= f'dropdown-{id}-agg',
-			placeholder='Slå sammen',
-			options=[
-				{'label': 'mean', 'value': 'mean'},
-				{'label': 'max', 'value': 'max'},
-				{'label': 'min', 'value': 'min'},
-				{'label': 'sum', 'value': 'sum'},
-			]
-		)
+		AggregationDropdown(id)
 	], style= {'width': '20%'})
 
-def KeyStatistics(df):
+def DisplayColumns(df):
+	"""
+	Creates inline displays of the values for each column
+	in the dataframe.
+	"""
 	return html.Div([
 		html.Div(
 			id=f'stat-{col}',

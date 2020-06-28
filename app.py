@@ -1,6 +1,6 @@
 import re
 import pandas as pd
-from datetime import datetime as dt
+from datetime import time
 import json
 
 import dash
@@ -11,8 +11,8 @@ from dash.dependencies import Output, Input
 from data.reader import PickledDataReader
 from data.util import string_range, merge_stations
 
-from components import PeriodSelection, KeyStatistics
-from util import create_figure, resolve_dates
+from components import PeriodSelection, DisplayColumns, AggregationDropdown
+from util import create_figure, resolve_dates, filter_by_hours
 
 
 reader = PickledDataReader()
@@ -31,6 +31,7 @@ app.layout = html.Div([
 			multi= True
 		),
 
+		# Container for selecting measurments to be shown in graph
 		html.Div([
 			dcc.Checklist(
 				id= 'checklist-pump-meas',
@@ -55,9 +56,10 @@ app.layout = html.Div([
 			max_date_allowed= reader.get_latest_date(),
 			min_date_allowed= reader.get_earliest_date(),
 			initial_visible_month= reader.get_latest_date(),
-			style= { 'borderStyle': 'none'}
+			style= { 'borderStyle': 'none'}  # Doesn't work
 		),
 
+		# Select years, months, days and weekdays container
 		html.Div([
 			PeriodSelection(vr, id) for id, vr in {
 			'years': reader.get_available_years(),
@@ -67,11 +69,30 @@ app.layout = html.Div([
 			}.items()
 		], style={'display': 'flex', 'justifyContent': 'space-around'}),
 
+		# Select hours container
+		html.Div([
+			html.Div(dcc.RangeSlider(
+				id= 'hours-select',
+				marks= {i: time(i).strftime('%H:%M') for i in range(0, 23, 4)},
+				value=[0, 23],
+				allowCross= False,
+				max= 23,
+				min=0,
+				step=1,
+				tooltip={'placement': 'bottomRight'}
+			), style={'display': 'inline-block', 'width': '80%'}),
+			html.Div(
+				AggregationDropdown('hours'),
+				style={'display': 'inline-block', 'width': '18%'}
+			)
+		]),
+
 		dcc.Graph(id='graph'),
 
+		# Container for conditional render of statistics
 		html.Div( id= 'statistics'),
 
-		# state
+		# state - hidden
 		html.Div(id= 'state-result', style={'display': 'none'}),
 		html.Div(id= 'state-merged-df', style={'display': 'none'})
 	])
@@ -130,9 +151,9 @@ def update_merged_df(stations, pump_meas, weather_meas, state):
 
 @app.callback(
 	[Output('graph', 'figure'), Output('statistics', 'children')],
-	[Input('state-merged-df', 'children')]
+	[Input('state-merged-df', 'children'), Input('hours-select', 'value')]
 )
-def update_graph(jsonified_df):
+def update_graph(jsonified_df, hour_pair):
 	if jsonified_df is None:
 		raise dash.exceptions.PreventUpdate(
 			'First time trough callback chain - no graph render'
@@ -141,13 +162,16 @@ def update_graph(jsonified_df):
 	# To be shown in graph
 	df = pd.read_json(jsonified_df, orient='split')
 
+	# Filter as specified
+	df = filter_by_hours(df, hour_pair)
+
 	# To be shown beneath graph
 	stats = df.agg({
 		col: ['mean', 'max', 'min', 'median', 'sum', 'std']
 		for col in df.columns
 	})
 
-	return create_figure(df), KeyStatistics(stats)
+	return create_figure(df), DisplayColumns(stats)
 
 if __name__ == '__main__':
 	app.run_server(debug=True)
