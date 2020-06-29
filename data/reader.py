@@ -25,7 +25,7 @@ class PickledDataReader(object):
 		self.logger.setLevel(logging.INFO)
 
 		# Path to processed file directory
-		self.path = os.path.normpath(
+		if path is None: self.path = os.path.normpath(
 			os.path.join(
 				os.path.dirname(__file__), 'pickled_data'
 			)
