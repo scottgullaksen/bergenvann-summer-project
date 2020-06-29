@@ -12,7 +12,7 @@ from data.reader import PickledDataReader
 from data.util import string_range, merge_stations
 
 from components import PeriodSelection, DisplayColumns, AggregationDropdown
-from util import aggregate_hours, create_figure, filter_by_hours, resolve_dates
+from util import aggregate_days, aggregate_hours, create_figure, filter_by_hours, resolve_dates
 
 reader = PickledDataReader()
 
@@ -152,9 +152,10 @@ def update_merged_df(stations, pump_meas, weather_meas, state):
     [Output('graph', 'figure'), Output('statistics', 'children')],[
     Input('state-merged-df','children'),
     Input('hours-select', 'value'),
-    Input('dropdown-hours-agg', 'value')]
+    Input('dropdown-hours-agg', 'value'),
+    Input('dropdown-days-agg', 'value'),]
 )
-def update_graph(jsonified_df, hour_pair, hour_agg_val):
+def update_graph(jsonified_df, hour_pair, hour_agg_val, days_agg_val):
     if jsonified_df is None:
         raise dash.exceptions.PreventUpdate(
             'First time trough callback chain - no graph render'
@@ -166,7 +167,9 @@ def update_graph(jsonified_df, hour_pair, hour_agg_val):
     # Filter as specified
     df = filter_by_hours(df, hour_pair)
     
-    if hour_agg_val != None: df = aggregate_hours(df)
+    if hour_agg_val != None: df = aggregate_hours(df, hour_agg_val)
+    
+    if days_agg_val != None: df = aggregate_days(df, days_agg_val)
     
     # To be shown beneath graph
     stats = df.agg({

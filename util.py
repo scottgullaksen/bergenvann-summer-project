@@ -48,5 +48,16 @@ def filter_by_hours(df, hour_ints):
     return df  # Could also use df.between_time(start_time, end_time), faster?
 
 def aggregate_hours(df: pd.DataFrame, method: str = 'mean'):
-    """Aggragate specified hours by method (mean, max, min or median)"""
-    return df.groupby(pd.Grouper(freq='D')).agg({col: method for col in df.columns})
+    """Aggregate specified hours by method (mean, max, min or median)"""
+    df = df.groupby(pd.Grouper(freq='D')).agg({ col: [method] for col in df.columns })
+    df.columns = df.columns.droplevel(1)
+    return df
+
+def aggregate_days(df: pd.DataFrame, method: str = 'mean'):
+    """Aggregate days of the month by method, e.g. mean"""
+    df =  df.groupby([pd.Grouper(freq='M'), df.index.hour]).agg(
+        { col: [method] for col in df.columns}
+    )
+    df.index = df.index.map( lambda m: m[0].replace(hour=m[1]))
+    df.columns = df.columns.droplevel(1)
+    return df
