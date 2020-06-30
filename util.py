@@ -49,15 +49,41 @@ def filter_by_hours(df, hour_ints):
 
 def aggregate_hours(df: pd.DataFrame, method: str = 'mean'):
     """Aggregate specified hours by method (mean, max, min or median)"""
-    df = df.groupby(pd.Grouper(freq='D')).agg({ col: [method] for col in df.columns })
+    df = df.groupby(df.index.date).agg({ col: [method] for col in df.columns })
+    df.index = pd.to_datetime(df.index)
     df.columns = df.columns.droplevel(1)
     return df
 
 def aggregate_days(df: pd.DataFrame, method: str = 'mean'):
     """Aggregate days of the month by method, e.g. mean"""
-    df =  df.groupby([pd.Grouper(freq='M'), df.index.hour]).agg(
+    df =  df.groupby([pd.Grouper(freq='MS'), df.index.hour]).agg(
         { col: [method] for col in df.columns}
     )
     df.index = df.index.map( lambda m: m[0].replace(hour=m[1]))
+    df.columns = df.columns.droplevel(1)
+    print(df)
+    return df
+
+def aggregate_months(df: pd.DataFrame, method: str = 'mean'):
+    """Aggregate months of the year by methof, e.g. sum"""
+    df =  df.groupby([pd.Grouper(freq='Y'), df.index.day, df.index.hour]).agg(
+        { col: [method] for col in df.columns}
+    )
+    print(df.index)
+    df.index = df.index.map( lambda m: m[0].replace(day= m[1], hour=m[2]) )
+    df.columns = df.columns.droplevel(1)
+    return df
+
+
+def aggregate_years(df: pd.DataFrame, method: str = 'mean'):
+    from datetime import datetime as dt
+    """Aggregate years by method, e.g. max"""
+    df =  df.groupby([df.index.month, df.index.day, df.index.hour]).agg(
+        { col: [method] for col in df.columns}
+    )
+    print(df)
+    df.info()
+    print(df.index)
+    df.index = df.index.map( lambda m: dt(2016, m[0], m[1], m[2]))  # 2016, beacause this is a leap year
     df.columns = df.columns.droplevel(1)
     return df

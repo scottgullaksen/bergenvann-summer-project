@@ -12,7 +12,7 @@ from data.reader import PickledDataReader
 from data.util import string_range, merge_stations
 
 from components import PeriodSelection, DisplayColumns, AggregationDropdown
-from util import aggregate_days, aggregate_hours, create_figure, filter_by_hours, resolve_dates
+from util import aggregate_days, aggregate_hours, aggregate_months, aggregate_years, create_figure, filter_by_hours, resolve_dates
 
 reader = PickledDataReader()
 
@@ -153,9 +153,11 @@ def update_merged_df(stations, pump_meas, weather_meas, state):
     Input('state-merged-df','children'),
     Input('hours-select', 'value'),
     Input('dropdown-hours-agg', 'value'),
-    Input('dropdown-days-agg', 'value'),]
+    Input('dropdown-days-agg', 'value'),
+    Input('dropdown-months-agg', 'value'),
+    Input('dropdown-years-agg', 'value'),]
 )
-def update_graph(jsonified_df, hour_pair, hour_agg_val, days_agg_val):
+def update_graph(jsonified_df, hour_pair, hour_agg_val, days_agg_val, months_agg_val, years_agg_val):
     if jsonified_df is None:
         raise dash.exceptions.PreventUpdate(
             'First time trough callback chain - no graph render'
@@ -167,15 +169,28 @@ def update_graph(jsonified_df, hour_pair, hour_agg_val, days_agg_val):
     # Filter as specified
     df = filter_by_hours(df, hour_pair)
     
-    if hour_agg_val != None: df = aggregate_hours(df, hour_agg_val)
-    
-    if days_agg_val != None: df = aggregate_days(df, days_agg_val)
-    
     # To be shown beneath graph
     stats = df.agg({
         col: ['mean', 'max', 'min', 'median', 'sum', 'std']
         for col in df.columns
     })
+    
+    # Repeating code here, fix later
+    if hour_agg_val != None:
+        df = aggregate_hours(df, hour_agg_val)
+        print(df)
+    
+    if days_agg_val != None:
+        df = aggregate_days(df, days_agg_val)
+        print(df)
+    
+    if months_agg_val != None:
+        df = aggregate_months(df, months_agg_val)
+        print(df)
+    
+    if years_agg_val != None:
+        df = aggregate_years(df, years_agg_val)
+        print(df)
 
     return create_figure(df), DisplayColumns(stats)
 
