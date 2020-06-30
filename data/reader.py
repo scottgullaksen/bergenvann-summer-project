@@ -159,8 +159,7 @@ class PickledDataReader(object):
 		Example:
 			get_data(date1= date, years= ['2011]) yields all contents from date1 only in 2011
 		"""
-		if not any([years, months, days]):  # of these specified, just use date range to construct paths. Faster
-			print('called')
+		if not any([years, months, days]):  # if these not specified, just use date range to construct paths. Faster
 			paths = self.__get_paths_between_dates(date1, date2)
 		else:
 			# Construct full paths

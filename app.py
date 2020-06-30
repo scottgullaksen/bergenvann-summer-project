@@ -12,7 +12,7 @@ from data.reader import PickledDataReader
 from data.util import string_range, merge_stations
 
 from components import PeriodSelection, DisplayColumns, AggregationDropdown
-from util import aggregate_days, aggregate_hours, aggregate_months, aggregate_years, create_figure, filter_by_hours, resolve_dates
+from util import aggregate_days, aggregate_hours, aggregate_months, aggregate_years, create_figure, filter_by_hours, filter_wet_days, resolve_dates
 
 reader = PickledDataReader()
 
@@ -132,12 +132,22 @@ def update_merged_df(stations, pump_meas, weather_meas, state):
         if stations and pump_meas else {})
     }
     if weather_meas: stations['vaerdata'] = weather_meas
-
+    
+    result = {  # Read from jsonified state
+        station: pd.read_json(jsond_df, orient= 'split')
+        for station, jsond_df in json.loads(state).items()
+    }
+    
+    print('result bfore filter:')
+    print(result)
+    print()
+    
+    result = filter_wet_days(result, 2, 10.0, 3)
+    print('result after filter:')
+    print(result)
+    
     df = merge_stations(
-        result= {  # Read from jsonified state
-            station: pd.read_json(jsond_df, orient= 'split')
-            for station, jsond_df in json.loads(state).items()
-        },
+        result= result,
         stations= stations
     ) if stations else None
 
@@ -178,19 +188,15 @@ def update_graph(jsonified_df, hour_pair, hour_agg_val, days_agg_val, months_agg
     # Repeating code here, fix later
     if hour_agg_val != None:
         df = aggregate_hours(df, hour_agg_val)
-        print(df)
     
     if days_agg_val != None:
         df = aggregate_days(df, days_agg_val)
-        print(df)
     
     if months_agg_val != None:
         df = aggregate_months(df, months_agg_val)
-        print(df)
     
     if years_agg_val != None:
         df = aggregate_years(df, years_agg_val)
-        print(df)
 
     return create_figure(df), DisplayColumns(stats)
 

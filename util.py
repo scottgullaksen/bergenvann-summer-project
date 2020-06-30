@@ -61,7 +61,6 @@ def aggregate_days(df: pd.DataFrame, method: str = 'mean'):
     )
     df.index = df.index.map( lambda m: m[0].replace(hour=m[1]))
     df.columns = df.columns.droplevel(1)
-    print(df)
     return df
 
 def aggregate_months(df: pd.DataFrame, method: str = 'mean'):
@@ -69,7 +68,6 @@ def aggregate_months(df: pd.DataFrame, method: str = 'mean'):
     df =  df.groupby([pd.Grouper(freq='Y'), df.index.day, df.index.hour]).agg(
         { col: [method] for col in df.columns}
     )
-    print(df.index)
     df.index = df.index.map( lambda m: m[0].replace(day= m[1], hour=m[2]) )
     df.columns = df.columns.droplevel(1)
     return df
@@ -81,9 +79,41 @@ def aggregate_years(df: pd.DataFrame, method: str = 'mean'):
     df =  df.groupby([df.index.month, df.index.day, df.index.hour]).agg(
         { col: [method] for col in df.columns}
     )
-    print(df)
-    df.info()
-    print(df.index)
     df.index = df.index.map( lambda m: dt(2016, m[0], m[1], m[2]))  # 2016, beacause this is a leap year
     df.columns = df.columns.droplevel(1)
     return df
+
+def filter_wet_days(dict_of_dfs: dict, num_days: int, treshold: float, lag: int):
+    """
+    Removes datapoints that is considered to be from "rainy" days.
+    What is determined as a rainy day, depends on num_days and value.
+    
+    Args
+        dict_of_dfs: result from reader.get_data, i.e. dfs containing data from all
+        stations
+        num_days: # of preceding days to concider when summing precipitation
+        values including current day
+        treshold: max treshold value for the summed precipitation level
+    """
+    df = dict_of_dfs['vaerdata']
+    print('vaerdate:')
+    print(df)
+    print()
+    current_values = [0] * (num_days * 24) # to store precipitation vals
+    print('current_values:', current_values)
+    print()
+    
+    def check_and_update(value):
+        current_values.pop(0)
+        current_values.append(value)
+        return sum(current_values[:-lag]) < treshold
+    
+    filtered = df[ df['precipitation (mm)'].apply(check_and_update) ]  # filter
+    
+    return {
+        station: (pd.merge(df, filtered, left_index= True, right_index= True)[[
+            col for col in df.columns
+        ]]
+        if station != 'vaerdata' else filtered)
+        for station, df in dict_of_dfs.items()
+    }
