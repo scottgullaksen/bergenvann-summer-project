@@ -5,7 +5,7 @@ import os
 import pickle
 import pandas as pd
 from datetime import datetime, timedelta
-from .util import abspath, find_first_filepath, find_last_filepath, keys
+from util import abspath, find_first_filepath, find_last_filepath, keys
 
 
 with open('./logging.yaml', 'r') as f:
@@ -30,6 +30,12 @@ class PickledDataReader(object):
                 os.path.dirname(__file__), 'pickled_data'
             )
         )
+        
+        # Used by get_data to determine read method
+        self.read_as = {
+            'dataframe': self.__as_dataframes,
+            'stream': self.__as_stream
+        }
 
     def __path_to_date(self, path) -> datetime:
         return datetime.strptime(
@@ -148,8 +154,9 @@ class PickledDataReader(object):
             hourly_data = {}
             for station, data in day['hours'].items():
                 for i, date in enumerate(data['date']):
-                    hourly_data[date] = hourly_data.get(date, {})[station] = {
-                        meas: vals[i] for meas, vals in data.items()
+                    if not date in hourly_data: hourly_data[date] = {'date': date}
+                    hourly_data[date][station] = {
+                        meas: vals[i] for meas, vals in data.items() if meas != 'date'
                     }
             for datapoint in hourly_data.values():
                 yield datapoint
@@ -168,7 +175,7 @@ class PickledDataReader(object):
                 yield pickle.load(f)
 
     def get_data(self, date1: datetime= None, date2: datetime= None, years:list= None,
-                    months: list= None, days:list= None, weekdays: list= [], df= True):
+                months: list= None, days:list= None, weekdays: list= [], how= 'dataframe'):
         """
         Generates all contentes af all files specified by the arguments:
 
@@ -196,9 +203,7 @@ class PickledDataReader(object):
                 if self.__path_to_date(path).isoweekday() in weekdays
             )
 
-        content = self.get_file_content(paths)
-
-        return self.__as_dataframes(content) if df else content
+        return self.read_as[how](self.get_file_content(paths))
 
 
 # For testing
@@ -208,7 +213,9 @@ if __name__ == "__main__":
     date1 = datetime(2015, 1, 24)
     date2 = datetime(2015, 1, 24)
 
-    for idx, data in enumerate(reader.get_data(date1, years= ['2016'], months=['01', '02'], weekdays=[7])):
+    for idx, data in enumerate(reader.get_data(
+        date1, years= ['2016'], months=['01', '02'], weekdays=[7], how= 'stream'
+    )):
         print(f'{idx} :')
         print(data)
-        print(data['hours']['vaerdata']['date'][0].isoweekday())
+        #print(data['hours']['vaerdata']['date'][0].isoweekday())
