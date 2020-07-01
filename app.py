@@ -47,6 +47,29 @@ app.layout = html.Div([
                     {'label': 'temperatur (C)', 'value': 'temp (C)'}
                 ],
                 style= {'display':'flex'}
+            ),
+            dcc.Input(
+                id='input-treshold',
+                type='number',
+                min= 0,
+                placeholder= 'Max nedbør (mm)',
+                style={'margin': '0% 1%'},
+            ),
+            html.Div(dcc.RangeSlider(
+                id= 'rangeslider-wetdays',
+                max= 5,
+                min= 1,
+                step= 1,
+                value= [1],
+                marks={  i: str(i) for i in range(1, 6) }
+            ), style= { 'width': '20%'}),
+            dcc.Input(
+                id='input-lag',
+                type='number',
+                min= 0,
+                placeholder= 'lag',
+                style={'margin': '0% 1%'},
+                value= 0
             )
         ], style= {'display': 'flex'}),
 
@@ -123,8 +146,11 @@ def update_result(start_date, end_date, years, months, days, weekdays):
     Input('checklist-pump-meas', 'value'),
     Input('checklist-weather-meas', 'value'),
     Input('state-result', 'children'),
+    Input('input-treshold', 'value'),
+    Input('rangeslider-wetdays', 'value'),
+    Input('input-lag', 'value')
 ])
-def update_merged_df(stations, pump_meas, weather_meas, state):
+def update_merged_df(stations, pump_meas, weather_meas, state, treshold, window_size, lag):
 
     # Create appropriate argument required by merge
     stations = {
@@ -138,18 +164,10 @@ def update_merged_df(stations, pump_meas, weather_meas, state):
         for station, jsond_df in json.loads(state).items()
     }
     
-    print('result bfore filter:')
-    print(result)
-    print()
+    if treshold:
+        result = filter_wet_days(result, window_size[0], treshold, lag)
     
-    result = filter_wet_days(result, 2, 10.0, 3)
-    print('result after filter:')
-    print(result)
-    
-    df = merge_stations(
-        result= result,
-        stations= stations
-    ) if stations else None
+    df = merge_stations(result,stations) if stations else None
 
     if df is None:
         raise dash.exceptions.PreventUpdate(

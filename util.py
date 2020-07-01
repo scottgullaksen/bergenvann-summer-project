@@ -96,17 +96,14 @@ def filter_wet_days(dict_of_dfs: dict, num_days: int, treshold: float, lag: int)
         treshold: max treshold value for the summed precipitation level
     """
     df = dict_of_dfs['vaerdata']
-    print('vaerdate:')
-    print(df)
-    print()
     current_values = [0] * (num_days * 24) # to store precipitation vals
-    print('current_values:', current_values)
-    print()
     
     def check_and_update(value):
+        # FIFO - keeps length the same
         current_values.pop(0)
         current_values.append(value)
-        return sum(current_values[:-lag]) < treshold
+        # In case lag is 0 -> must use len
+        return sum(current_values[:len(current_values) - lag]) < treshold
     
     filtered = df[ df['precipitation (mm)'].apply(check_and_update) ]  # filter
     
