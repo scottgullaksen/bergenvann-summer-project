@@ -5,7 +5,7 @@ import os
 import pickle
 import pandas as pd
 from datetime import datetime, timedelta
-from util import abspath, find_first_filepath, find_last_filepath, keys
+from .util import abspath, find_first_filepath, find_last_filepath, keys
 
 
 with open('./logging.yaml', 'r') as f:

@@ -47,42 +47,17 @@ class CSVFileReader(object):
         if len(self.paths) == 0:
             raise ValueError("The provided directory/file contained no csv files")
 
-    def read_clean_pump_data(self, f):
+    def read_datapoints_from(self, reader, cleaner, dir_or_filename= None):
         """
-        Generates cleaned rows from the file specified
-        """
-        dataset = csv.reader(f, delimiter= '\t')
-        for row in dataset:
-            try:
-                yield {
-                'date': datetime.strptime(row[0], '%Y-%m-%d %H:%M'),
-                'quantity (l/s)': float(row[2].replace(',', '.')),
-                'level (m)': float(row[4].replace(',', '.'))
-            }
-            except Exception as e:
-                self.logger.info(f'raw data: {row} could not be dealt with')
-
-
-    def read_cleaned_weather_data(self, f):
-        """
-        Generates cleaned rows from the file specified
-        """
-        dataset = csv.DictReader(f, delimiter= ';')
-        for row in dataset:
-            try:
-                 yield {
-                    'date': datetime.strptime(row['Tid(norsk normaltid)'], '%d.%m.%Y %H:%M'),
-                    'temp (C)': float(row['Lufttemperatur'].replace(',', '.'))
-                        if any(c.isnumeric() for c in row['Lufttemperatur']) else None,
-                    'precipitation (mm)': float(row['NedbÃ¸r (1 t)'].replace(',', '.'))
-                        if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else 0.0
-                }
-            except Exception as e:
-                self.logger.warning(f'raw data: {row} could not be dealt with')
-
-    def read_datapoints_from(self, dir_or_filename= None):
-        """
-        Returns each row from the csv file or dir specified. Generator.
+        Yields processed/cleaned datapoints from the csv files under
+        dir_or_filenmae.
+        
+        Args:
+            reader: callback that accepts a file object and returns a
+            itereable of the rows in the file
+            
+            cleaner: callback that accepts individual rows from reader
+            and returns a processed/cleaned datastructure from it.
         """
         # Return everything under root if nothing is specified
         if not dir_or_filename: dir_or_filename = os.path.dirname(self.root)
@@ -90,22 +65,54 @@ class CSVFileReader(object):
         for path in self.paths:
             if dir_or_filename in path:  # Only return contents of relevant files
                 with open(path) as csvfile:
-                    cleaned = (self.read_clean_pump_data(csvfile)
-                               if 'pumpedata' in path
-                               else self.read_cleaned_weather_data(csvfile))
-                    for datapoint in cleaned:
-                        yield datapoint
+                    for row in reader(csvfile):
+                        try:
+                            yield cleaner(row)
+                        except Exception as e:
+                            self.logger.warning(f'raw data: {row} could not be dealt with')
+                            print(e)
+
+#-------------Cleaners and Readers to be used in above function-------------------------------------------------
+
+def pump_reader(f): return csv.reader(f, delimiter= '\t')
+
+def weather_reader(f): return csv.DictReader(f, delimiter= ';')
+
+def tide_reader(f): return csv.reader(f, delimiter= ' ')
+
+def pump_cleaner(row: list): return {
+    'date': datetime.strptime(row[0], '%Y-%m-%d %H:%M'),
+    'quantity (l/s)': float(row[2].replace(',', '.')),
+    'level (m)': float(row[4].replace(',', '.'))
+}
+
+def weather_cleaner(row: list): return {
+    'date': datetime.strptime(row['Tid(norsk normaltid)'], '%d.%m.%Y %H:%M'),
+    'temp (C)': float(row['Lufttemperatur'].replace(',', '.'))
+        if any(c.isnumeric() for c in row['Lufttemperatur']) else None,
+    'precipitation (mm)': float(row['NedbÃ¸r (1 t)'].replace(',', '.'))
+        if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else 0.0
+}
+
+def snowdepth_cleaner(row: list): return {
+    'date': datetime.strptime(row['Tid(norsk normaltid)'], '%d.%m.%Y'),
+    'snodybde (cm)': int(row['SnÃ¸dybde'])
+}
+
+def tide_cleaner(row: list):  
+    return {
+    'date': datetime.fromisoformat(row[0]),
+    'level (cm)': float(row[3] or row[4]) # Use the non-empty element
+    }
 
 if __name__ == '__main__':
 
-    path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 'raw_data', 'vaerdata' , 'florida_01.01.11-31.12.13.csv'
-    )
-
     reader = CSVFileReader()
+    
+    print(bool(''))
 
     counter = 0
-    for row in reader.read_datapoints_from():
+    for row in reader.read_datapoints_from(tide_reader, tide_cleaner, 'tidevannsdata'):
         if counter == 10: break
         counter += 1
         print(row)
