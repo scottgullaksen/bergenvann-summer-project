@@ -108,8 +108,6 @@ def tide_cleaner(row: list):
 if __name__ == '__main__':
 
     reader = CSVFileReader()
-    
-    print(bool(''))
 
     counter = 0
     for row in reader.read_datapoints_from(tide_reader, tide_cleaner, 'tidevannsdata'):

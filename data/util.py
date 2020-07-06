@@ -2,14 +2,14 @@ from datetime import datetime, timedelta
 import pandas as pd
 import os
 
-keys = [
+PUMPSTATIONS = [
 	os.path.splitext(filename)[0]
 	for filename in os.listdir(
 		os.path.normpath(
 			os.path.join(os.path.dirname(__file__), 'raw_data/pumpedata') 
 		)
 	) if os.path.splitext(filename)[1] == '.csv'
-] + ['vaerdata']
+]
 
 def abspath(path, date: datetime):
 	"""
