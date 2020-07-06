@@ -5,7 +5,7 @@ import os
 import pickle
 import pandas as pd
 from datetime import datetime, timedelta
-from util import abspath, find_first_filepath, find_last_filepath
+from .util import abspath, find_first_filepath, find_last_filepath, PUMPSTATIONS
 
 
 with open('./logging.yaml', 'r') as f:
@@ -38,9 +38,21 @@ class PickledDataReader(object):
         }
 
     def __path_to_date(self, path) -> datetime:
-        return datetime.strptime(
-            os.path.splitext(os.path.relpath(path, self.path))[0], '%Y\\%m\\%d'
-        )
+        try:
+            date_string = os.path.splitext(os.path.relpath(path, self.path))[0]
+            return datetime.strptime(date_string, '%Y\\%m\\%d')
+
+        except ValueError as ve:
+            import calendar
+            self.logger.warning(
+                f"""
+                Could not convert string {date_string} to datetime.
+                '{ve}'.
+                Use last day of month instead.
+                """
+            )
+            y, m = tuple(int(s) for s in date_string.split('\\')[:2])
+            return datetime(y, m, calendar.monthrange(y, m)[1])           
 
     def __resolve_dates(self, date1: datetime, date2: datetime):
         """
@@ -167,7 +179,7 @@ class PickledDataReader(object):
 
     def get_available_years(self): return os.listdir(self.path)
 
-    def get_stations(self): return keys  # Should change so reads from pickled corpus instead
+    def get_stations(self): return PUMPSTATIONS + ['vaerdata', 'tidevannsdata', 'snodybde']  # Should change so reads from pickled corpus instead
 
     def get_file_content(self, paths: list):
         for file_path in paths:
@@ -214,8 +226,12 @@ if __name__ == "__main__":
     date2 = datetime(2015, 1, 24)
 
     for idx, data in enumerate(reader.get_data(
-        date1, years= ['2016'], months=['01', '02'], weekdays=[7], how= 'stream'
+        date1, years= ['2016'], months=['01', '02'], how= 'stream'
     )):
         print(f'{idx} :')
         print(data)
         #print(data['hours']['vaerdata']['date'][0].isoweekday())
+        
+    print(reader.get_data(
+        date1, years= ['2016'], months=['01', '02'], how= 'dataframe'
+    )['tidevannsdata'])
