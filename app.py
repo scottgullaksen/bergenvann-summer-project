@@ -72,6 +72,21 @@ app.layout = html.Div([
                 value= 0
             )
         ], style= {'display': 'flex'}),
+        
+        html.Div([
+            dcc.Checklist(
+                id= 'checklist-tide',
+                options=[
+                    {'label': 'Tidevann', 'value': 'level (cm)'}
+                ]
+            ),
+            dcc.Checklist(
+                id= 'checklist-snow',
+                options=[
+                    {'label': 'Snødybde', 'value': 'snodybde (cm)'}
+                ]
+            )
+        ], style= {'display': 'flex'}),
 
         dcc.DatePickerRange(
             id= 'date-selector',
@@ -148,9 +163,12 @@ def update_result(start_date, end_date, years, months, days, weekdays):
     Input('state-result', 'children'),
     Input('input-treshold', 'value'),
     Input('rangeslider-wetdays', 'value'),
-    Input('input-lag', 'value')
+    Input('input-lag', 'value'),
+    Input('checklist-snow', 'value'),
+    Input('checklist-tide', 'value')
 ])
-def update_merged_df(stations, pump_meas, weather_meas, state, treshold, window_size, lag):
+def update_merged_df(stations, pump_meas, weather_meas, state,
+                     treshold, window_size, lag, snow, tide):
 
     # Create appropriate argument required by merge
     stations = {
@@ -158,6 +176,8 @@ def update_merged_df(stations, pump_meas, weather_meas, state, treshold, window_
         if stations and pump_meas else {})
     }
     if weather_meas: stations['vaerdata'] = weather_meas
+    if snow: stations['snodybde'] = snow
+    if tide: stations['tidevannsdata'] = tide
     
     result = {  # Read from jsonified state
         station: pd.read_json(jsond_df, orient= 'split')
