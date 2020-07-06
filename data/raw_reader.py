@@ -99,10 +99,10 @@ def snowdepth_cleaner(row: list): return {
     'snodybde (cm)': int(row['SnÃ¸dybde'])
 }
 
-def tide_cleaner(row: list):  
+def tide_cleaner(row: list):
     return {
-    'date': datetime.fromisoformat(row[0]),
-    'level (cm)': float(row[3] or row[4]) # Use the non-empty element
+    'date': datetime.fromisoformat(row[0]).replace(tzinfo= None),
+    'level (cm)': float(row[3] or row[4] or row[5]) # Use the non-empty element
     }
 
 if __name__ == '__main__':

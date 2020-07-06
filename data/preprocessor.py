@@ -2,8 +2,8 @@ import logging
 import os
 from datetime import datetime
 import pickle
-from data.util import *
-from data.raw_reader import *
+from util import *
+from raw_reader import *
 
 # Initialize processing steps for files to be read
 PROCESSORS = {
@@ -26,7 +26,7 @@ class Preprocessor(object):
         target_dir: path to directory where preprocessed files will be placed. If not
         specified it will create one in the same dir as this module.
     """
-    def __init__(self, reader, target_dir: os.path= None):
+    def __init__(self, reader: CSVFileReader, target_dir: os.path= None, processors= PROCESSORS):
 
         self.logger = logging.getLogger('dev')
         self.logger.setLevel(logging.INFO)
@@ -36,6 +36,8 @@ class Preprocessor(object):
         self.target = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), 'pickled_data'
         ) if not target_dir else target_dir
+        
+        self.processors = processors
 
     def save(self, target, data):
         with open(target, 'wb') as f:
@@ -51,7 +53,7 @@ class Preprocessor(object):
         with open(target, 'rb') as f:
             return pickle.load(f)
 
-    def transform(self, pickle_keys: list):
+    def transform(self):
         """
         Places all datapoints read from reader into files given by the path:
         target_dir/[year]/[month]/[day].pickle
@@ -64,9 +66,14 @@ class Preprocessor(object):
             corresponding pickled date dictionary stored under the pickle key.
         """
         last_datapoint = None
-
-        for kwrd in pickle_keys:
-            for datapoint in self.reader.read_datapoints_from(dir_or_filename= kwrd):
+        # These correspond to files or directories
+        # Their values are descriptions of how to process the respective files under kwrd
+        for kwrd in self.processors.keys():
+            for datapoint in self.reader.read_datapoints_from(
+                self.processors[kwrd]['reader'],
+                self.processors[kwrd]['cleaner'],
+                dir_or_filename= kwrd
+            ):
 
                 # Open a new file if first time through loop or new day
                 if not last_datapoint or last_datapoint['date'].date() != datapoint['date'].date():
@@ -78,17 +85,10 @@ class Preprocessor(object):
  
                     data = self.load(target)
 
-                """if kwrd in data['hours']:
-                    for k in datapoint.keys():
-                        data['hours'][kwrd][k].append(datapoint[k])
-                else:
-                    data['hours'][kwrd] = { k: [v] for k, v in datapoint.items() }"""
-                    
                 for k in datapoint.keys():
                     data['hours'].setdefault(kwrd, {}).setdefault(k, []).append(datapoint[k])
                 
-                last_datapoint = datapoint
-                
+                last_datapoint = datapoint     
 
         self.save(target, data)
 
@@ -99,4 +99,4 @@ if __name__ == "__main__":
 
     preprocessor = Preprocessor(reader=csv_reader)
 
-    preprocessor.transform(pickle_keys=keys)
+    preprocessor.transform()
