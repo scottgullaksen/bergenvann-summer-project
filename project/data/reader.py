@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from .util import abspath, find_first_filepath, find_last_filepath, PUMPSTATIONS
 
 
-with open('./logging.yaml', 'r') as f:
+with open('./project/logging.yaml', 'r') as f:
     log_cfg = yaml.safe_load(f.read())
 
 logging.config.dictConfig(log_cfg)
@@ -173,13 +173,17 @@ class PickledDataReader(object):
             for datapoint in hourly_data.values():
                 yield datapoint
 
-    def get_earliest_date(self): return self.__path_to_date(find_first_filepath(self.path))
+    def get_earliest_date(self):
+        return self.__path_to_date(find_first_filepath(self.path))
 
-    def get_latest_date(self): return self.__path_to_date(find_last_filepath(self.path))
+    def get_latest_date(self):
+        return self.__path_to_date(find_last_filepath(self.path))
 
     def get_available_years(self): return os.listdir(self.path)
 
-    def get_stations(self): return PUMPSTATIONS + ['vaerdata', 'tidevannsdata', 'snodybde']  # Should change so reads from pickled corpus instead
+    def get_stations(self):
+        # Should change so reads from pickled corpus instead
+        return PUMPSTATIONS + ['vaerdata', 'tidevannsdata', 'snodybde']
 
     def get_file_content(self, paths: list):
         for file_path in paths:

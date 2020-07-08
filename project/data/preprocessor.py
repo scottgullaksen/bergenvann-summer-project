@@ -41,7 +41,7 @@ class Preprocessor(object):
 
     def save(self, target, data):
         with open(target, 'wb') as f:
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(data, f, pickle.DEFAULT_PROTOCOL)
 
     def load(self, target):
         parent = os.path.dirname(target)
