@@ -37,14 +37,17 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         self.pump_lvls.pop(0)
         self.pump_lvls.append(datapoint[self.station]['quantity (l/s)'])
         
-        # Update precipitation history
+        # Update precipitation and temp history
+        if 'vaerdata' in datapoint:
+            self.precipitation_lvls.append(datapoint['vaerdata']['precipitation (mm)'])
+            self.temp_lvls.append(datapoint['vaerdata']['temp (C)'])
+
+            if len(self.temp_lvls) == 24: self.temp_lvls.pop(0)
+        else:
+            self.precipitation_lvls.append(0)  # What should the deafualt value be?
+
         self.precipitation_lvls.pop(0)
-        self.precipitation_lvls.append(datapoint['vaerdata']['precipitation (mm)'])
-        
-        # Update temperature history
-        if len(self.temp_lvls) == 24: self.temp_lvls.pop(0)
-        self.temp_lvls.append(datapoint['vaerdata']['temp (C)'])
-        
+
         # Update snowlevel: Only present at certain hours
         if 'snodybde' in datapoint:
             self.snowlvl = datapoint['snodybde']['snodybde (cm)']
@@ -101,55 +104,56 @@ class Shuffler(BaseEstimator, TransformerMixin):
     def transform(self, dataset): return dataset
 
 class kerasEstimator(BaseEstimator):
-	"""
-	A sci-kit estimator wrapper for precompiled keras models.
-	Change val_split field to evalute on validation set during training.
-	The history variable contains the datapoints during training. Can
-	be used for plotting purposes.
-	"""
-	def __init__(self, model, epochs, batch_size):
-		self.model = model
-		self.model.save_weights('model.h5')  # Save initial weights
+    """
+    A sci-kit estimator wrapper for precompiled keras models.
+    Change val_split field to evalute on validation set during training.
+    The history variable contains the datapoints during training. Can
+    be used for plotting purposes.
+    """
+    def __init__(self, model, epochs= 1, batch_size= 64, val_split= 0.):
+        self.model = model
+        
+ 
+        # Obtained after fitting
+        self.history = None
 
-		# Obtained after fitting
-		self.history = None
+        # For fitting process
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.val_split = val_split
 
-		# For fitting process
-		self.epochs = epochs
-		self.batch_size = batch_size
-		self.val_split = 0.
+    def fit(self, X, y):
+        self.history = self.model.fit(
+            X,
+            y,
+            epochs= self.epochs,
+            batch_size= self.batch_size,
+            validation_split= self.val_split
+        )
+        return self
 
-	def fit(self, X, y):
-		self.model.load_weights('model.h5')  # Restore untrained model before training
-		self.history = self.model.fit(
-			X,
-			y,
-			epochs= self.epochs,
-			batch_size= self.batch_size,
-			validation_split= self.val_split
-		)
-		return self
+    def predict(self, X):
+        return self.model.predict(X)
 
-	def predict(self, X):
-		return self.model.predict(X).argmax(axis= 1)
-
-	def score(self, X, y):
-		"""
-		Returns loss and accuricy on the provided data set
-		"""
-		return self.model.evaluate(X, y)
+    def score(self, X, y):
+        """
+        Returns loss and accuricy on the provided data set
+        """
+        return self.model.evaluate(X, y)
 
 
 if __name__ == "__main__":
     from project.data.reader import PickledDataReader
+    from datetime import datetime as dt
 
     station = 'Gronneviksoren'
+    from_date = dt(2011, 1, 1)  # Weather data available from then
     vectorizer = PumpdataVectorizer(station)
     vectorized = vectorizer.transform(
         [
-            x for x in PickledDataReader().get_data(how= 'stream')
+            x for x in PickledDataReader().get_data(from_date, how= 'stream')
             if station in x
         ]
     )
 
-    print(vectorized[:10])
+    print(vectorized[-10:])
