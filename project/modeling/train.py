@@ -1,5 +1,6 @@
 if __name__ == "__main__":
     from datetime import datetime
+    import matplotlib.pyplot as plt
     
     from keras.models import Sequential
     from keras.layers import Dense, BatchNormalization, ReLU, Dropout
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     
     from project.modeling.estimators import PumpdataVectorizer, kerasEstimator
     from project.data.reader import PickledDataReader
-    from util import plot_train, plot_test_pred
+    from util import plot_train, create_pred_dataframe, save, load
     
     #-------------------Load dataset------------------------------------
     reader = PickledDataReader()
@@ -25,41 +26,53 @@ if __name__ == "__main__":
     ]
     labels = [x[station]['quantity (l/s)'] for x in dataset]
     
-    #----------------Hyperparameters-----------------------------------
-    EPHOCS = 10
+    #----------------Training parameters-----------------------------------
+    EPHOCS = 200
     BATCH_SIZE = 512
     LR = 5e-4
     INPUT_SIZE = (66,) # Constant
     
-    #-----------------Define Keras neural net model--------------------
     
-    keras_model = Sequential([
-        Dense(units= 64, input_shape= INPUT_SIZE),
-        ReLU(),
-        Dense(units= 1)
-    ])
-    
-    keras_model.compile(
-        optimizer=Adam(learning_rate= LR),
-        loss= MeanSquaredError(),
-        metrics= [MeanAbsoluteError()]
-    )
-    
+    #------------Define keras neural net model---------------------------
+    def build_fcnn():
+        keras_model = Sequential([
+            Dense(units= 64, input_shape= INPUT_SIZE),
+            ReLU(),
+            Dense(units= 1)
+        ])
+
+        keras_model.compile(
+            optimizer=Adam(learning_rate= LR),
+            loss= MeanSquaredError(),
+            metrics= [MeanAbsoluteError()]
+        )
+        return keras_model
+        
     #----------------Define automated pipeline-----------------------
-    model = Pipeline([
-        ('vectorizer', PumpdataVectorizer(station)),
-        # Subtracts mean and scales by std on each feature
-        ('standarizer', StandardScaler()),
-        ('nn', kerasEstimator(keras_model,
-                              EPHOCS,
-                              BATCH_SIZE,
-                              val_split= 0.1))
-    ])
+    def build_pipeline():
+        return Pipeline([
+            ('vectorizer', PumpdataVectorizer(station)),
+            # Subtracts mean and scales by std on each feature
+            ('standarizer', StandardScaler()),
+            ('nn', kerasEstimator(build_fcnn(),
+                                  EPHOCS,
+                                  BATCH_SIZE,
+                                  val_split= 0.1))
+        ])
     
-    model.fit(dataset, labels)
+    # Train
+    def train():
+        model = build_pipeline()
+        model.fit(dataset, labels)
+        plot_train(model.named_steps['nn'].history)
+        save(model)
     
-    plot_train(model.named_steps['nn'].history)
+    #train()
     
-    df = plot_test_pred(dataset, station, model)
+    model = load(build_fcnn)
+    df = create_pred_dataframe(dataset, station, model)
     
-    df.head()
+    print(df)
+    
+    df.iloc[1000:1100].plot()
+    plt.show()

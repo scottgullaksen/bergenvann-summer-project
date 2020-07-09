@@ -52,12 +52,17 @@ def plot_train(history):
 
     plt.show()
     
-def plot_test_pred(test_set, station, model):
+def create_pred_dataframe(test_set, station, model):
+    """
+    Creates a dataframe with pump values from test_set
+    and corresponding estimations from model. Indexed
+    by datetime objects.
+    """
     
     df = pd.DataFrame({
         'date': [x['date'] for x in test_set],
         'true values': [x[station]['quantity (l/s)'] for x in test_set],
-        'estimated': model.predict(test_set)
+        'estimated': model.predict(test_set).flatten()
     })
     
     df.set_index('date', inplace= True)
@@ -67,7 +72,7 @@ def plot_test_pred(test_set, station, model):
 
 def save(model):
     model.named_steps['nn'].model.save_weights('nn_model.h5')
-    model.pop(-1)
+    model.steps.pop(-1)
     joblib.dump(model, 'pipeline.pkl')
     
 def load(nn_builder):
