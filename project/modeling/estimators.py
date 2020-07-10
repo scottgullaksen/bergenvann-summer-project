@@ -28,7 +28,7 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         
         self.snowlvl = 0
         
-        self.last_date = None
+        self.last_date = None  # To check if date are ordered correctly
         
     def __check_date(self, date):
         """
@@ -58,6 +58,7 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         return self
     
     def update(self, datapoint):
+        """Update state/history of transformer to include new datapoint"""
         
         # Update pump history
         self.pump_lvls.pop(0)
@@ -85,7 +86,7 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         current = [date.month, date.day, date.isoweekday(), date.hour]
         
         # Add 24 most recent precipitation lvls
-        current.extend(self.precipitation_lvls[-24:])
+        current.extend(self.precipitation_lvls[48:])
         
         current.extend(  # Extend with 6 avg values from window 24-48 hours
             avg(self.precipitation_lvls[i: i + 4])

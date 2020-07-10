@@ -28,11 +28,11 @@ if __name__ == "__main__":
     labels = [x[station]['quantity (l/s)'] for x in dataset]
     
     #----------------Training parameters-----------------------------------
-    EPHOCS = 1
+    EPHOCS = 100
     BATCH_SIZE = 512
     LR = 1e-4
     INPUT_SIZE = (66,) # Constant
-    
+    TEST_SIZE = 5000    
     
     #------------Define keras neural net model---------------------------
     def build_fcnn():
@@ -66,21 +66,31 @@ if __name__ == "__main__":
                                   BATCH_SIZE,
                                   val_split= 0.07))
         ])
-    
-    # Train
+
+    #------------------Train and evaluate------------------------
     def train():
+        X_train = dataset[:-TEST_SIZE]
+        Y_train = labels[:-TEST_SIZE]
+        
         model = build_pipeline()
-        model.fit(dataset[:-5000], labels[:-5000])
+        model.fit(X_train, Y_train)
+        
         #plot_train(model.named_steps['nn'].history)
+        
         #save(model)
-    
-    # Evaluate
+
     def evaluate():
-        X_test = dataset[-5000:]
-        Y_test = labels[-5000:]
+        X_test = dataset[-TEST_SIZE:]
+        Y_test = labels[-TEST_SIZE:]
+        
+        # So you don't have to retrain every time you want to evaluate
         model = load(build_fcnn)
+        
+        # Get loss(mse) and mae
         score = model.score(X_test, Y_test)
         print(score)
+        
+        # Plot predictions vs real values
         df = create_pred_dataframe(X_test, station, model)
         df.plot()
         plt.show()
