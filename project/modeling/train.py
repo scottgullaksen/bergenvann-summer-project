@@ -24,28 +24,35 @@ if __name__ == "__main__":
         x for x in reader.get_data(from_date,
                                    how='stream') if station in x
     ]
+    dataset.sort(key= lambda x: x['date'])  # Sort on date, ascending
     labels = [x[station]['quantity (l/s)'] for x in dataset]
     
     #----------------Training parameters-----------------------------------
-    EPHOCS = 200
+    EPHOCS = 1
     BATCH_SIZE = 512
-    LR = 5e-4
+    LR = 1e-4
     INPUT_SIZE = (66,) # Constant
     
     
     #------------Define keras neural net model---------------------------
     def build_fcnn():
         keras_model = Sequential([
-            Dense(units= 64, input_shape= INPUT_SIZE),
+            BatchNormalization(input_shape=INPUT_SIZE),
+            Dense(units= 256),
             ReLU(),
+            BatchNormalization(),
+            Dense(units= 128),
+            ReLU(),
+            BatchNormalization(),
             Dense(units= 1)
         ])
 
         keras_model.compile(
-            optimizer=Adam(learning_rate= LR),
+            optimizer= Adam(learning_rate= LR),
             loss= MeanSquaredError(),
             metrics= [MeanAbsoluteError()]
         )
+        keras_model.summary()
         return keras_model
         
     #----------------Define automated pipeline-----------------------
@@ -57,22 +64,26 @@ if __name__ == "__main__":
             ('nn', kerasEstimator(build_fcnn(),
                                   EPHOCS,
                                   BATCH_SIZE,
-                                  val_split= 0.1))
+                                  val_split= 0.07))
         ])
     
     # Train
     def train():
         model = build_pipeline()
-        model.fit(dataset, labels)
-        plot_train(model.named_steps['nn'].history)
-        save(model)
+        model.fit(dataset[:-5000], labels[:-5000])
+        #plot_train(model.named_steps['nn'].history)
+        #save(model)
     
-    #train()
-    
-    model = load(build_fcnn)
-    df = create_pred_dataframe(dataset, station, model)
-    
-    print(df)
-    
-    df.iloc[1000:1100].plot()
-    plt.show()
+    # Evaluate
+    def evaluate():
+        X_test = dataset[-5000:]
+        Y_test = labels[-5000:]
+        model = load(build_fcnn)
+        score = model.score(X_test, Y_test)
+        print(score)
+        df = create_pred_dataframe(X_test, station, model)
+        df.plot()
+        plt.show()
+        
+    train()
+    #evaluate()

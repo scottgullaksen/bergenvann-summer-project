@@ -229,13 +229,40 @@ if __name__ == "__main__":
     date1 = datetime(2015, 1, 24)
     date2 = datetime(2015, 1, 24)
 
+    # Test stream reading
+    # Print all datapoints from Jan and Feb, 2016
     for idx, data in enumerate(reader.get_data(
         date1, years= ['2016'], months=['01', '02'], how= 'stream'
     )):
-        print(f'{idx} :')
+        print(f'{idx} :')  # Enumerate datapoints
         print(data)
         #print(data['hours']['vaerdata']['date'][0].isoweekday())
-        
+    
+    # Test read dataframe and see if tide levels included in datapoints
     print(reader.get_data(
         date1, years= ['2016'], months=['01', '02'], how= 'dataframe'
     )['tidevannsdata'])
+    
+    # Test if datapoints read in correct order (first to last by date)
+    # Test if time difference between datapoints more than one hour
+    def test_correct_order():  # Not working
+        last = None
+        for data in reader.get_data(how='stream'):
+            date = data['date']
+            if last == None:
+                last = date
+                continue
+            if last > date:
+                print(f"""
+                      Datapoints not read in correct order.
+                      Previous date: {last}
+                      Current date: {date}
+                      """)
+            diff = date - last
+            diff_hours = diff.days * 24 + diff.seconds // 3600
+            if diff_hours > 1.5:
+                print(f"""
+                      Warning: Difference between last date and current
+                      is {diff}
+                      """)
+            last = date

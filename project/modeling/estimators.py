@@ -27,6 +27,32 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         self.pump_lvls = [-1] * 24
         
         self.snowlvl = 0
+        
+        self.last_date = None
+        
+    def __check_date(self, date):
+        """
+        Checks if date comes after last_date
+        or if the gap between the two are more than 
+        one hour
+        """
+        if self.last_date != None:
+            if self.last_date > date:
+                print(f"""
+                      Datapoints not read in correct order.
+                      Previous date: {self.last_date}
+                      Current date: {date}
+                      """)
+            diff = date - self.last_date
+            diff_hours = diff.days * 24 + diff.seconds // 3600
+            if diff_hours > 1.5:
+                print(f"""
+                      Warning: Difference between last date
+                      {self.last_date} and current
+                      {date}
+                      is {diff}
+                      """)
+        self.last_date = date
     
     def fit(self, dataset, labels= None):
         return self
@@ -86,6 +112,8 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         current.extend(self.pump_lvls)
         
         self.update(datapoint)
+        
+        self.__check_date(date)
         
         return current
     

@@ -2,6 +2,7 @@ import time
 import numpy as np
 import pandas as pd
 import joblib
+import os
 from functools import wraps
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import f1_score, make_scorer
@@ -70,16 +71,36 @@ def create_pred_dataframe(test_set, station, model):
     
     return df
 
-def save(model):
-    model.named_steps['nn'].model.save_weights('nn_model.h5')
-    model.steps.pop(-1)
-    joblib.dump(model, 'pipeline.pkl')
+def save(model, path_to_dir= None):
+    # Create path and make dirs
+    parent = path_to_dir or os.path.join(
+        os.path.dirname(__file__), 'model_checkpoints'
+    )
+    if not os.path.exists(parent): os.makedirs(parent)
     
-def load(nn_builder):
+    # Save in respective files
+    model.named_steps['nn'].model.save_weights(
+        os.path.join(parent, 'nn_model.h5')
+    )
+    model.steps.pop(-1)
+    joblib.dump(model,
+                os.path.join(parent,
+                             'pipeline.pkl'))
+    
+def load(nn_builder, path_to_dir= None):
     from project.modeling.estimators import kerasEstimator
+    
+    parent = path_to_dir or os.path.join(
+        os.path.dirname(__file__), 'model_checkpoints'
+    )
+    
     keras_model = nn_builder()
-    keras_model.load_weights('nn_model.h5')
-    model = joblib.load('pipeline.pkl')
+    keras_model.load_weights(
+        os.path.join(parent, 'nn_model.h5'),
+    )
+    model = joblib.load(
+        os.path.join(parent, 'pipeline.pkl')
+    )
     model.steps.append(('nn', kerasEstimator(keras_model)))
     return model
 
