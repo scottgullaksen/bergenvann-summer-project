@@ -86,10 +86,16 @@ def pump_cleaner(row: list): return {
     'level (m)': float(row[4].replace(',', '.'))
 }
 
-def weather_cleaner(row: list): return {
+def florida_cleaner(row: list): return {
     'date': datetime.strptime(row['Tid(norsk normaltid)'], '%d.%m.%Y %H:%M'),
     'temp (C)': float(row['Lufttemperatur'].replace(',', '.'))
         if any(c.isnumeric() for c in row['Lufttemperatur']) else None,
+    'precipitation (mm)': float(row['NedbÃ¸r (1 t)'].replace(',', '.'))
+        if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else 0.0
+}
+
+def florida_uib_cleaner(row: list): return {  # Only contains precipitation data
+    'date': datetime.strptime(row['Tid(norsk normaltid)'], '%d.%m.%Y %H:%M'),
     'precipitation (mm)': float(row['NedbÃ¸r (1 t)'].replace(',', '.'))
         if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else 0.0
 }

@@ -13,22 +13,91 @@ AVG_HOUR_TIDE_VALS = [
 ]
 
 class PumpdataVectorizer(BaseEstimator, TransformerMixin):
-    
     def __init__(self, pumpstation):
         self.station = pumpstation  # To be trained on
         
         # To keep track of historic values
-        self.precipitation_lvls = [0.3] * 72
+        self.precipitation_lvls = None
         
         # To compute average temperature last x hours ago
-        self.temp_lvls = [8.6]  # avg temp from all recorded values
+        self.temp_lvls = None
         
         # Measured pump levels from the last 24 hours
-        self.pump_lvls = [-1] * 24
+        self.pump_lvls = None
         
-        self.snowlvl = 0
+        self.snowlvl = None
         
         self.last_date = None  # To check if date are ordered correctly
+        
+    def __is_initalized(self):
+        """Returns true if all class fields are set"""
+        return all( field is not None for field in [
+            self.precipitation_lvls,
+            self.temp_lvls,
+            self.pump_lvls,
+            self.snowlvl,
+        ])
+        
+    def __initialize(self, date):
+        """
+        If no datapoints precedes date, fill fields
+        (historical data) with average values calculated from dataset
+        """
+        from _datetime import timedelta
+        from project.data import reader
+        from project.util import aggregate_years, aggregate_days
+        from project.data.util import merge_stations
+        
+        reader = reader()
+        
+        # Convert to string (required by quiery)
+        month = date.month
+        month = f'0{month}' if month < 10 else str(month)
+        
+        month_data = reader.get_data(months= [month])
+        
+        print('relevant month is ' + month)
+        
+        # Define from what stations and their measurments to include in df
+        stations = {
+            self.station: ['quantity (l/s)'],
+            'vaerdata': ['precipitation (mm)', 'temp (C)'],
+            'snodybde': ['snodybde (cm)']
+        }
+        
+        df = merge_stations(month_data, stations)
+        
+        # Use mean from relevant month
+        self.precipitation_lvls = [df['precipitation (mm)'].mean()] * 72
+        
+        print('mean nedbør: ', self.precipitation_lvls[0])
+        
+        # Merge df on days, then on years
+        # resulting in mean of hourly values from relevenat month
+        aggregated = aggregate_days(aggregate_years(df)).iloc[::-1] # Reverse
+        
+        self.temp_lvls = aggregated['temp (C)'].values.tolist()
+        
+        print('mean temp levels: ', self.temp_lvls)
+        
+        self.pump_lvls = aggregated['quantity (l/s)'].values.tolist()
+        
+        print('mean pump levels: ', self.pump_lvls)
+        
+        self.snowlvl = df['snodybde (cm)'].mean()
+        
+        print('mean snowlevel: ', self.snowlvl)
+        
+        # Retrieve data available from 4 days ago up until now
+        # and update start-state with those values
+        recent_data = sorted([
+            x for x in reader.get_data(date - timedelta(days= 4),
+                                       date,
+                                       how= 'stream')
+            if self.station in x
+        ], key= lambda x: x['date'])
+        
+        for data in recent_data: self.update(data)
         
     def __check_date(self, date):
         """
@@ -66,21 +135,27 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         
         # Update precipitation and temp history
         if 'vaerdata' in datapoint:
-            self.precipitation_lvls.append(datapoint['vaerdata']['precipitation (mm)'])
+            self.precipitation_lvls.append(
+                datapoint['vaerdata']['precipitation (mm)']
+            )
             self.temp_lvls.append(datapoint['vaerdata']['temp (C)'])
-
-            if len(self.temp_lvls) == 24: self.temp_lvls.pop(0)
         else:
             self.precipitation_lvls.append(0)  # What should the deafualt value be?
 
         self.precipitation_lvls.pop(0)
+        if len(self.temp_lvls) == 24: self.temp_lvls.pop(0)
 
         # Update snowlevel: Only present at certain hours
         if 'snodybde' in datapoint:
             self.snowlvl = datapoint['snodybde']['snodybde (cm)']
     
     def vectorize(self, datapoint):
+        
         date = datapoint['date']
+        
+        if not self.__is_initalized():
+            print('initializing transformer with mean values...')
+            self.__initialize(date)
         
         # First part are time features
         current = [date.month, date.day, date.isoweekday(), date.hour]
@@ -179,10 +254,11 @@ if __name__ == "__main__":
     from_date = dt(2011, 1, 1)  # Weather data available from then
     vectorizer = PumpdataVectorizer(station)
     vectorized = vectorizer.transform(
-        [
-            x for x in PickledDataReader().get_data(from_date, how= 'stream')
+        sorted([
+            x for x in PickledDataReader().get_data(from_date,
+                                                    how= 'stream')
             if station in x
-        ]
+        ], key= lambda x: x['date'])
     )
 
-    print(vectorized[-10:])
+    print(vectorized[:10])
