@@ -9,7 +9,8 @@ from raw_reader import *
 PROCESSORS = {
     ps: {'reader': pump_reader, 'cleaner': pump_cleaner} for ps in PUMPSTATIONS
 }
-PROCESSORS['vaerdata'] = {'reader': weather_reader, 'cleaner': weather_cleaner}
+PROCESSORS['florida_sentrum'] = {'reader': weather_reader, 'cleaner': florida_cleaner}
+PROCESSORS['florida_uib'] = {'reader': weather_reader, 'cleaner': florida_uib_cleaner}
 PROCESSORS['tidevannsdata'] = {'reader': tide_reader, 'cleaner': tide_cleaner}
 PROCESSORS['snodybde'] = {'reader': weather_reader, 'cleaner': snowdepth_cleaner}
 

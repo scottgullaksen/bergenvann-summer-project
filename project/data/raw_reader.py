@@ -116,7 +116,7 @@ if __name__ == '__main__':
     reader = CSVFileReader()
 
     counter = 0
-    for row in reader.read_datapoints_from(tide_reader, tide_cleaner, 'tidevannsdata'):
+    for row in reader.read_datapoints_from(weather_reader, florida_uib_cleaner, 'florida_uib'):
         if counter == 10: break
         counter += 1
         print(row)
