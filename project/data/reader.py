@@ -232,7 +232,7 @@ if __name__ == "__main__":
     # Test stream reading
     # Print all datapoints from Jan and Feb, 2016
     for idx, data in enumerate(reader.get_data(
-        date1, years= ['2016'], months=['01', '02'], how= 'stream'
+        date1, years= ['2018'], months=['01', '02'], how= 'stream'
     )):
         print(f'{idx} :')  # Enumerate datapoints
         print(data)

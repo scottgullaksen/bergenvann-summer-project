@@ -4,6 +4,7 @@ import logging
 import logging.config
 import yaml
 from datetime import datetime
+import numpy as np
 
 with open('./project/logging.yaml', 'r') as f:
     log_cfg = yaml.safe_load(f.read())
@@ -89,15 +90,15 @@ def pump_cleaner(row: list): return {
 def florida_cleaner(row: list): return {
     'date': datetime.strptime(row['Tid(norsk normaltid)'], '%d.%m.%Y %H:%M'),
     'temp (C)': float(row['Lufttemperatur'].replace(',', '.'))
-        if any(c.isnumeric() for c in row['Lufttemperatur']) else None,
+        if any(c.isnumeric() for c in row['Lufttemperatur']) else np.nan,
     'precipitation (mm)': float(row['NedbÃ¸r (1 t)'].replace(',', '.'))
-        if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else 0.0
+        if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else np.nan
 }
 
 def florida_uib_cleaner(row: list): return {  # Only contains precipitation data
     'date': datetime.strptime(row['Tid(norsk normaltid)'], '%d.%m.%Y %H:%M'),
     'precipitation (mm)': float(row['NedbÃ¸r (1 t)'].replace(',', '.'))
-        if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else 0.0
+        if any(c.isnumeric() for c in row['NedbÃ¸r (1 t)']) else np.nan
 }
 
 def snowdepth_cleaner(row: list): return {

@@ -1,10 +1,14 @@
-import numpy as np
+from _datetime import timedelta
 
 from sklearn.base import BaseEstimator, TransformerMixin
+import numpy as np
 
 #from keras.utils import to_categorical
 
 from util import avg
+from project.data import reader
+from project.util import aggregate_years, aggregate_days
+from project.data.util import merge_stations
 
 AVG_HOUR_TIDE_VALS = [
     107.58, 104.38, 97.97, 89.74, 81.83, 76.45, 75.06, 78.16,
@@ -12,8 +16,9 @@ AVG_HOUR_TIDE_VALS = [
     82.73, 77.20, 75.43, 78.39, 85.21, 93.78, 101.73, 106.71
 ]
 
-class PumpdataVectorizer(BaseEstimator, TransformerMixin):
+class PumpdataVectorizer(BaseEstimator, TransformerMixin):    
     def __init__(self, pumpstation):
+          
         self.station = pumpstation  # To be trained on
         
         # To keep track of historic values
@@ -29,6 +34,11 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         
         self.last_date = None  # To check if date are ordered correctly
         
+        # Used when values are missing
+        self.averages = [{}] * 12 # months
+        
+        self.reader = reader()
+        
     def __is_initalized(self):
         """Returns true if all class fields are set"""
         return all( field is not None for field in [
@@ -38,62 +48,70 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
             self.snowlvl,
         ])
         
-    def __initialize(self, date):
-        """
-        If no datapoints precedes date, fill fields
-        (historical data) with average values calculated from dataset
-        """
-        from _datetime import timedelta
-        from project.data import reader
-        from project.util import aggregate_years, aggregate_days
-        from project.data.util import merge_stations
+    def __get_averages(self, month: int):
+
+        month_data = self.averages[month - 1]
         
-        reader = reader()
+        if month_data: return month_data
         
         # Convert to string (required by quiery)
-        month = date.month
         month = f'0{month}' if month < 10 else str(month)
         
-        month_data = reader.get_data(months= [month])
+        month_data = self.reader.get_data(months= [month])
         
-        print('relevant month is ' + month)
+        print('getting data for month ' + month)
         
         # Define from what stations and their measurments to include in df
         stations = {
             self.station: ['quantity (l/s)'],
-            'vaerdata': ['precipitation (mm)', 'temp (C)'],
+            'florida_sentrum': ['precipitation (mm)', 'temp (C)'],
+            'florida_uib': ['precipitation (mm)'],
             'snodybde': ['snodybde (cm)']
         }
         
         df = merge_stations(month_data, stations)
         
         # Use mean from relevant month
-        self.precipitation_lvls = [df['precipitation (mm)'].mean()] * 72
-        
-        print('mean nedbør: ', self.precipitation_lvls[0])
+        # x/y prefixes are automatically added on merge when column name is the same
+        # .values -> np array
+        month_data['precipitation'] = np.nanmean(
+            df[['precipitation (mm)_x', 'precipitation (mm)_y']].values
+        )
         
         # Merge df on days, then on years
         # resulting in mean of hourly values from relevenat month
-        aggregated = aggregate_days(aggregate_years(df)).iloc[::-1] # Reverse
+        aggregated = aggregate_days(aggregate_years(df))
         
-        self.temp_lvls = aggregated['temp (C)'].values.tolist()
+        month_data['temperatures'] = aggregated['temp (C)'].values.tolist()
         
-        print('mean temp levels: ', self.temp_lvls)
+        month_data['pump_values'] = aggregated['quantity (l/s)'].values.tolist()
         
-        self.pump_lvls = aggregated['quantity (l/s)'].values.tolist()
+        month_data['snowlevel'] = df['snodybde (cm)'].mean()
         
-        print('mean pump levels: ', self.pump_lvls)
+        return month_data
         
-        self.snowlvl = df['snodybde (cm)'].mean()
         
-        print('mean snowlevel: ', self.snowlvl)
+    def __initialize(self, date):
+        """
+        If no datapoints precedes date, fill fields
+        (historical data) with average values calculated from dataset
+        """
+        month_averages = self.__get_averages(date.month)
+        self.precipitation_lvls = [month_averages['precipitation']] * 72
+        self.pump_lvls = month_averages['pump_values']
+        self.temp_lvls = month_averages['temperatures']
+        self.snowlvl = month_averages['snowlevel']
+        
+        print('averga values from initialisation')
+        print(self.precipitation_lvls, self.pump_lvls,
+              self.temp_lvls, self.snowlvl, sep= '\n')
         
         # Retrieve data available from 4 days ago up until now
         # and update start-state with those values
         recent_data = sorted([
-            x for x in reader.get_data(date - timedelta(days= 4),
-                                       date,
-                                       how= 'stream')
+            x for x in self.reader.get_data(date - timedelta(days= 4),
+                                            date - timedelta(days= 1),
+                                            how= 'stream')
             if self.station in x
         ], key= lambda x: x['date'])
         
@@ -123,25 +141,36 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
                       """)
         self.last_date = date
     
-    def fit(self, dataset, labels= None):
-        return self
-    
     def update(self, datapoint):
         """Update state/history of transformer to include new datapoint"""
         
         # Update pump history
+        # These values should always be present
         self.pump_lvls.pop(0)
         self.pump_lvls.append(datapoint[self.station]['quantity (l/s)'])
         
         # Update precipitation and temp history
-        if 'vaerdata' in datapoint:
-            self.precipitation_lvls.append(
-                datapoint['vaerdata']['precipitation (mm)']
+        # Precipitation data might not always be present
+        new_val = []
+        if 'florida_sentrum' in datapoint:
+            new_val.append(
+                datapoint['florida_sentrum']['precipitation (mm)']
             )
-            self.temp_lvls.append(datapoint['vaerdata']['temp (C)'])
-        else:
-            self.precipitation_lvls.append(0)  # What should the deafualt value be?
-
+            self.temp_lvls.append(datapoint['florida_sentrum']['temp (C)'])
+        if 'florida_uib' in datapoint:
+            new_val.append(
+                datapoint['florida_uib']['precipitation (mm)']
+            )
+            
+        if datapoint['date'] == dt(2011, 1, 1, 0):
+            print('newval: ', new_val)
+        # Set precipitation as average of weather station data
+        # availeable. If not, use month average instead
+        self.precipitation_lvls.append(
+            np.nanmean(np.array(new_val)) if new_val else self.__get_averages(
+                datapoint['date'].month
+            )['precipitation']
+        )
         self.precipitation_lvls.pop(0)
         if len(self.temp_lvls) == 24: self.temp_lvls.pop(0)
 
@@ -149,12 +178,12 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         if 'snodybde' in datapoint:
             self.snowlvl = datapoint['snodybde']['snodybde (cm)']
     
-    def vectorize(self, datapoint):
+    def __vectorize(self, datapoint):
         
         date = datapoint['date']
         
         if not self.__is_initalized():
-            print('initializing transformer with mean values...')
+            print('initializing transformer from data', date)
             self.__initialize(date)
         
         # First part are time features
@@ -193,8 +222,11 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         
         return current
     
+    def fit(self, dataset, labels= None):
+        return self
+    
     def transform(self, dataset):
-        return np.array([self.vectorize(x) for x in dataset])
+        return np.array([self.__vectorize(x) for x in dataset])
     
 class Shuffler(BaseEstimator, TransformerMixin):
     """Shuffle the dataset and labels inplace"""
