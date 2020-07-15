@@ -71,7 +71,7 @@ def create_pred_dataframe(test_set, station, model):
     
     return df
 
-def save(model, path_to_dir= None):
+def save(model, path_to_dir= None, filename= ''):
     # Create path and make dirs
     parent = path_to_dir or os.path.join(
         os.path.dirname(__file__), 'model_checkpoints'
@@ -80,14 +80,14 @@ def save(model, path_to_dir= None):
     
     # Save in respective files
     model.named_steps['nn'].model.save_weights(
-        os.path.join(parent, 'nn_model.h5')
+        os.path.join(parent, f'{filename}_model.h5')
     )
     model.steps.pop(-1)
     joblib.dump(model,
                 os.path.join(parent,
-                             'pipeline.pkl'))
+                             f'{filename}_pipeline.pkl'))
     
-def load(nn_builder, path_to_dir= None):
+def load(nn_builder, path_to_dir= None, filename= ''):
     from project.modeling.estimators import kerasEstimator
     
     parent = path_to_dir or os.path.join(
@@ -96,10 +96,10 @@ def load(nn_builder, path_to_dir= None):
     
     keras_model = nn_builder()
     keras_model.load_weights(
-        os.path.join(parent, 'nn_model.h5'),
+        os.path.join(parent, f'{filename}_model.h5'),
     )
     model = joblib.load(
-        os.path.join(parent, 'pipeline.pkl')
+        os.path.join(parent, f'{filename}_pipeline.pkl')
     )
     model.steps.append(('nn', kerasEstimator(keras_model)))
     return model

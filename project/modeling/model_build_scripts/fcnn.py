@@ -1,5 +1,5 @@
 if __name__ == "__main__":
-    from datetime import datetime
+    from datetime import datetime as dt
     import matplotlib.pyplot as plt
     
     from keras.models import Sequential
@@ -13,17 +13,28 @@ if __name__ == "__main__":
     
     from project.modeling.estimators import PumpdataVectorizer, kerasEstimator
     from project.data.reader import PickledDataReader
-    from util import plot_train, create_pred_dataframe, save, load
+    from project.modeling.util import plot_train, create_pred_dataframe, save, load
     
     #-------------------Load dataset------------------------------------
     reader = PickledDataReader()
     station = 'Gronneviksoren'
-    from_date = datetime(2011, 1, 1)  # Weather data available from then
+    #station = 'GeorgernesVerft'
     
     dataset = [
-        x for x in reader.get_data(from_date,
-                                   how='stream') if station in x
+        x for x in reader.get_data(
+            dt(2010, 4, 1),
+            dt(2011, 3, 13),
+            how= 'stream'
+        )
+        if station in x
+    ] + [
+        x for x in reader.get_data(
+            dt(2011, 4, 6),
+            how= 'stream'
+        )
+        if station in x
     ]
+
     dataset.sort(key= lambda x: x['date'])  # Sort on date, ascending
     labels = [x[station]['quantity (l/s)'] for x in dataset]
     
@@ -31,19 +42,22 @@ if __name__ == "__main__":
     EPHOCS = 100
     BATCH_SIZE = 512
     LR = 1e-4
-    INPUT_SIZE = (66,) # Constant
-    TEST_SIZE = 5000    
+    INPUT_SIZE = (125,) # Constant
+    TEST_SIZE = 5000
     
     #------------Define keras neural net model---------------------------
     def build_fcnn():
         keras_model = Sequential([
             BatchNormalization(input_shape=INPUT_SIZE),
-            Dense(units= 256),
-            ReLU(),
-            BatchNormalization(),
+            Dropout(0.5),
             Dense(units= 128),
             ReLU(),
             BatchNormalization(),
+            Dropout(0.5),
+            Dense(units= 128),
+            ReLU(),
+            BatchNormalization(),
+            Dropout(0.5),
             Dense(units= 1)
         ])
 
@@ -75,16 +89,16 @@ if __name__ == "__main__":
         model = build_pipeline()
         model.fit(X_train, Y_train)
         
-        #plot_train(model.named_steps['nn'].history)
+        plot_train(model.named_steps['nn'].history)
         
-        #save(model)
+        save(model, filename=station)
 
     def evaluate():
         X_test = dataset[-TEST_SIZE:]
         Y_test = labels[-TEST_SIZE:]
         
         # So you don't have to retrain every time you want to evaluate
-        model = load(build_fcnn)
+        model = load(build_fcnn, filename=station)
         
         # Get loss(mse) and mae
         score = model.score(X_test, Y_test)
@@ -96,4 +110,4 @@ if __name__ == "__main__":
         plt.show()
         
     train()
-    #evaluate()
+    evaluate()

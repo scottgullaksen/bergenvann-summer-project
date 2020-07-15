@@ -5,8 +5,8 @@ import numpy as np
 
 #from keras.utils import to_categorical
 
-from util import avg
-from project.data import reader
+from project.modeling.util import avg
+from project.data.reader import PickledDataReader as reader
 from project.util import aggregate_years, aggregate_days
 from project.data.util import merge_stations
 
@@ -22,31 +22,24 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         self.station = pumpstation  # To be trained on
         
         # To keep track of historic values
-        self.precipitation_lvls = None
+        self.precipitation_lvls = [0] * 72
         
         # To compute average temperature last x hours ago
-        self.temp_lvls = None
+        self.temp_lvls = [0] * 24
         
         # Measured pump levels from the last 24 hours
-        self.pump_lvls = None
+        self.pump_lvls = [0] * 24
         
-        self.snowlvl = None
+        self.snowlvl = 0
+        
+        self.tide_lvls = [0] * 24
         
         self.last_date = None  # To check if date are ordered correctly
         
         # Used when values are missing
-        self.averages = [{}] * 12 # months
+        self.averages = [{} for i in range(12)]
         
-        self.reader = reader()
-        
-    def __is_initalized(self):
-        """Returns true if all class fields are set"""
-        return all( field is not None for field in [
-            self.precipitation_lvls,
-            self.temp_lvls,
-            self.pump_lvls,
-            self.snowlvl,
-        ])
+        #self.reader = reader()
         
     def __get_averages(self, month: int):
 
@@ -57,9 +50,9 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         # Convert to string (required by quiery)
         month = f'0{month}' if month < 10 else str(month)
         
-        month_data = self.reader.get_data(months= [month])
+        print('computing data for month ' + month)
         
-        print('getting data for month ' + month)
+        result = reader().get_data(months= [month])
         
         # Define from what stations and their measurments to include in df
         stations = {
@@ -69,7 +62,7 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
             'snodybde': ['snodybde (cm)']
         }
         
-        df = merge_stations(month_data, stations)
+        df = merge_stations(result, stations)
         
         # Use mean from relevant month
         # x/y prefixes are automatically added on merge when column name is the same
@@ -90,66 +83,31 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         
         return month_data
         
-        
-    def __initialize(self, date):
+    def __hours_since_last_date(self, date):
         """
-        If no datapoints precedes date, fill fields
-        (historical data) with average values calculated from dataset
+        Returns: number of hours between date and last_date
+        
+        raises: Exception if order of datapoints not correct
         """
-        month_averages = self.__get_averages(date.month)
-        self.precipitation_lvls = [month_averages['precipitation']] * 72
-        self.pump_lvls = month_averages['pump_values']
-        self.temp_lvls = month_averages['temperatures']
-        self.snowlvl = month_averages['snowlevel']
-        
-        print('averga values from initialisation')
-        print(self.precipitation_lvls, self.pump_lvls,
-              self.temp_lvls, self.snowlvl, sep= '\n')
-        
-        # Retrieve data available from 4 days ago up until now
-        # and update start-state with those values
-        recent_data = sorted([
-            x for x in self.reader.get_data(date - timedelta(days= 4),
-                                            date - timedelta(days= 1),
-                                            how= 'stream')
-            if self.station in x
-        ], key= lambda x: x['date'])
-        
-        for data in recent_data: self.update(data)
-        
-    def __check_date(self, date):
-        """
-        Checks if date comes after last_date
-        or if the gap between the two are more than 
-        one hour
-        """
-        if self.last_date != None:
-            if self.last_date > date:
-                print(f"""
-                      Datapoints not read in correct order.
-                      Previous date: {self.last_date}
-                      Current date: {date}
-                      """)
-            diff = date - self.last_date
-            diff_hours = diff.days * 24 + diff.seconds // 3600
-            if diff_hours > 1.5:
-                print(f"""
-                      Warning: Difference between last date
-                      {self.last_date} and current
-                      {date}
-                      is {diff}
-                      """)
-        self.last_date = date
+        if self.last_date > date:
+            raise Exception('datapoints are not fed in correct order')
+        diff = date - self.last_date
+        diff_hours = diff.days * 24 + diff.seconds // 3600
+        if diff_hours > 1.5:
+            print(f'difference between last date {self.last_date} and current {date} is {diff_hours}')
+        return int(diff_hours)
     
-    def update(self, datapoint):
+    def __update(self, datapoint):
         """Update state/history of transformer to include new datapoint"""
         
-        # Update pump history
-        # These values should always be present
-        self.pump_lvls.pop(0)
-        self.pump_lvls.append(datapoint[self.station]['quantity (l/s)'])
+        date = datapoint['date']
         
-        # Update precipitation and temp history
+        # UPDATE PUMP HISTORY
+        # These values should always be present
+        self.pump_lvls.append(datapoint[self.station]['quantity (l/s)'])
+        self.pump_lvls.pop(0)
+        
+        # UPDATE PRECIPITATION AND TEMP HISTORY
         # Precipitation data might not always be present
         new_val = []
         if 'florida_sentrum' in datapoint:
@@ -157,40 +115,89 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
                 datapoint['florida_sentrum']['precipitation (mm)']
             )
             self.temp_lvls.append(datapoint['florida_sentrum']['temp (C)'])
+        else:
+            # Use avg temp from relevant hour and month istead
+            avg_vals = self.__get_averages(date.month)
+            avg_temp_val = avg_vals['temperatures'][date.hour]
+            self.temp_lvls.append(avg_temp_val)
+    
         if 'florida_uib' in datapoint:
             new_val.append(
                 datapoint['florida_uib']['precipitation (mm)']
             )
-            
-        if datapoint['date'] == dt(2011, 1, 1, 0):
-            print('newval: ', new_val)
         # Set precipitation as average of weather station data
         # availeable. If not, use month average instead
         self.precipitation_lvls.append(
-            np.nanmean(np.array(new_val)) if new_val else self.__get_averages(
-                datapoint['date'].month
-            )['precipitation']
+            np.nanmean(np.array(new_val))
+            if not all(map(np.isnan, new_val))
+            else self.__get_averages(datapoint['date'].month)['precipitation']
         )
         self.precipitation_lvls.pop(0)
-        if len(self.temp_lvls) == 24: self.temp_lvls.pop(0)
+        self.temp_lvls.pop(0)
 
-        # Update snowlevel: Only present at certain hours
+        # UPDATE SNOWLEVEL
+        # Only present at certain hours
         if 'snodybde' in datapoint:
             self.snowlvl = datapoint['snodybde']['snodybde (cm)']
+            
+        # UPDATE TIDE LEVEL DATA
+        self.tide_lvls.append(
+            datapoint['tidevannsdata']['level (cm)']
+            if 'tidevannsdata' in datapoint
+            else AVG_HOUR_TIDE_VALS[date.hour]  # Use avg values if data missing
+        )
+        self.tide_lvls.pop(0)
+        
+        # UPDATE DATE
+        self.last_date = date
+            
+    def __impute_missing_dates(self, date):
+        """
+        Checks the date to see if the intervall from the last date
+        is more than one hour. Corrects state of transformer with
+        average values based on month.
+        """
+        
+        missing_dates = [  # create sequence of dates to impute
+            (date - timedelta(hours= i))
+            for i in range(1, min(self.__hours_since_last_date(date), 73))
+        ]
+        
+        if not missing_dates: return
+        
+        recent_data = {  # create a dict for rapid indexing
+            x['date']: x  for x in reader().get_data(
+                date - timedelta(days= 4),
+                date,
+                how= 'stream'
+            )
+        }
+        
+        for prev_date in missing_dates[::-1]:
+            month_data = self.__get_averages(prev_date.month)
+            datapoint = recent_data.get(prev_date, {})
+
+            if not self.station in datapoint:
+                datapoint[self.station] = {
+                    'quantity (l/s)': month_data['pump_values'][prev_date.hour]
+                }
+        
+            self.__update(datapoint)
+        
+        print(f'imputing for values between dates: {missing_dates[-1]} and {missing_dates[0]}')
     
     def __vectorize(self, datapoint):
         
         date = datapoint['date']
         
-        if not self.__is_initalized():
-            print('initializing transformer from data', date)
-            self.__initialize(date)
+        self.__impute_missing_dates(date)
         
         # First part are time features
         current = [date.month, date.day, date.isoweekday(), date.hour]
         
         # Add 24 most recent precipitation lvls
-        current.extend(self.precipitation_lvls[48:])
+        
+        """current.extend(self.precipitation_lvls[48:])
         
         current.extend(  # Extend with 6 avg values from window 24-48 hours
             avg(self.precipitation_lvls[i: i + 4])
@@ -200,25 +207,26 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         current.extend(  # Extend with 4 avg values from window 0-24 hours
             avg(self.precipitation_lvls[i: i + 6])
             for i in range(0, 24, 6) 
-        )
+        )"""
         
         # Add temperature features
-        current.append(avg(self.temp_lvls[-min(4, len(self.temp_lvls)):]))
-        current.append(avg(self.temp_lvls))
         
-        # Add tide and snow level data
-        if 'tidevannsdata' in datapoint:
-            current.append(datapoint['tidevannsdata']['level (cm)'])
-        else:  # Use avg values if data missing
-            current.append(AVG_HOUR_TIDE_VALS[date.hour])
+        # current.append(avg(self.temp_lvls[-min(4, len(self.temp_lvls)):]))
+        #current.append(avg(self.temp_lvls))
     
         current.append(self.snowlvl)
         
-        current.extend(self.pump_lvls)
+        #current.extend(self.pump_lvls)
         
-        self.update(datapoint)
+        # Want to include vals from current datapoint in vector?
+        # extend current AFTER update
+        self.__update(datapoint)
         
-        self.__check_date(date)
+        current.extend(self.temp_lvls)
+        
+        current.extend(self.precipitation_lvls)
+        
+        current.extend(self.tide_lvls)
         
         return current
     
@@ -226,6 +234,8 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, dataset):
+        # So the first vectors are initialized correctly:
+        self.last_date = dataset[0]['date'] - timedelta(days= 4)
         return np.array([self.__vectorize(x) for x in dataset])
     
 class Shuffler(BaseEstimator, TransformerMixin):
@@ -283,11 +293,15 @@ if __name__ == "__main__":
     from datetime import datetime as dt
 
     station = 'Gronneviksoren'
-    from_date = dt(2011, 1, 1)  # Weather data available from then
     vectorizer = PumpdataVectorizer(station)
     vectorized = vectorizer.transform(
         sorted([
-            x for x in PickledDataReader().get_data(from_date,
+            x for x in PickledDataReader().get_data(dt(2010, 4, 1),
+                                                    dt(2011, 3, 13),
+                                                    how= 'stream')
+            if station in x
+        ] + [
+            x for x in PickledDataReader().get_data(dt(2011, 4, 6),
                                                     how= 'stream')
             if station in x
         ], key= lambda x: x['date'])
