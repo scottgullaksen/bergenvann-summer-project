@@ -41,6 +41,7 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         
         #self.reader = reader()
     
+    # Should make this more general -> add date features as fields to class?
     @classmethod
     def get_vector_len(cls):
         obj = cls('')
@@ -55,7 +56,10 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
 
         month_data = self.averages[month - 1]
         
-        if month_data: return month_data
+        
+        if month_data:
+            # Data for this month already computed
+            return month_data
         
         # Convert to string (required by quiery)
         month = f'0{month}' if month < 10 else str(month)
@@ -104,7 +108,7 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         diff = date - self.last_date
         diff_hours = diff.days * 24 + diff.seconds // 3600
         if diff_hours > 1.5:
-            print(f'difference between last date {self.last_date} and current {date} is {diff_hours}')
+            print(f'difference between last date {self.last_date} and current {date} is {diff_hours} hours')
         return int(diff_hours)
     
     def __update(self, datapoint):
@@ -175,6 +179,8 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         
         if not missing_dates: return
         
+        print(f'imputing for values between dates: {missing_dates[-1]} and {missing_dates[0]}')
+        
         recent_data = {  # create a dict for rapid indexing
             x['date']: x  for x in reader().get_data(
                 date - timedelta(days= 4),
@@ -193,8 +199,6 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
                 }
         
             self.__update(datapoint)
-        
-        print(f'imputing for values between dates: {missing_dates[-1]} and {missing_dates[0]}')
     
     def __vectorize(self, datapoint):
         
@@ -298,6 +302,7 @@ class kerasEstimator(BaseEstimator):
         return self.model.evaluate(X, y)
 
 
+# Check the vectors created pu PumpDataVectorizer
 if __name__ == "__main__":
     from project.data.reader import PickledDataReader
     from datetime import datetime as dt

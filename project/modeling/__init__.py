@@ -2,7 +2,7 @@ import pandas as pd
 from project.modeling import util
 from project.modeling.model_build_scripts import fcnn
 
-# Not currently used
+# NOT IN USE
 def get_predictions(datapoints: list, stations: list) -> dict:
     
     # For each of the stations, get their respective models
@@ -47,7 +47,8 @@ def add_predictions(datapoints, stations: list):
             if preds['next'][0] == dp['date']:
                 dp[s]['estimated'] = preds['next'][1]
                 try: preds['next'] = next(preds['gen'])
-                except StopIteration: preds['next'] = (None, None)  # Signal end of iterator
+                # End of iterator -> signal stop adding predictions
+                except StopIteration: preds['next'] = (None, None)
         
         yield dp
 

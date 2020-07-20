@@ -107,18 +107,8 @@ def filter_wet_days(dict_of_dfs: dict, num_days: int, treshold: float, lag: int)
     
     filtered = df[ df['precipitation (mm)'].apply(check_and_update) ]  # filter
     
-    print(filtered)
-    
     return {
         station: (df.loc[df.index.intersection(filtered.index)]
         if station != 'florida_sentrum' else filtered)
         for station, df in dict_of_dfs.items()
     }
-    
-def get_date_range(dict_of_dfs):
-    """
-    Get earliest and latest dates indexed in the dataframes.
-    Note: Assumes df's are sorted by ascending date
-    """
-    return (min(df.index[0] for df in dict_of_dfs.values()),
-            max(df.index[-1] for df in dict_of_dfs.values()))

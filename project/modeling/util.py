@@ -49,12 +49,13 @@ def create_pred_dataframe(datapoints, station, model):
     """
     Creates a dataframe with pump values from test_set
     and corresponding estimations from model. Indexed
-    by datetime objects.
+    by datetime objects. Used for plotting results after
+    training keras model.
     """
     
     df = pd.DataFrame({
         'date': [x['date'] for x in datapoints],
-        #'true values': [x[station]['quantity (l/S)'] for x in datapoints],
+        'true values': [x[station]['quantity (l/S)'] for x in datapoints],
         'estimated': model.predict(datapoints).flatten()
     })
     

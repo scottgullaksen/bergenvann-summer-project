@@ -38,13 +38,14 @@ def find_last_filepath(path: os.path) -> os.path:
         )
     )
 
+# NOT IN USE
 def string_range(first: int, last: int):
     """Create a string representation of the range"""
     return [
         f'0{i}' if i < 10 else str(i) for i in range(first, last + 1)
     ]
 
-
+# ONLY USED IN MODELING SCRPITS, SHOULD SWITCH TO stream_to_dataframe
 def merge_stations(result: dict, stations: dict, left_df: pd.DataFrame= None):
     """
     Merge all stations values
