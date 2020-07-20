@@ -8,6 +8,8 @@ from sklearn.model_selection import cross_val_score
 from sklearn.metrics import f1_score, make_scorer
 import matplotlib.pyplot as plt
 
+from project.modeling.estimators import kerasEstimator
+
 def timeit(func):
     """
     Decorator for timing a fuction.
@@ -19,16 +21,6 @@ def timeit(func):
         result = func(*args, **kwargs)
         return result, time.time() - start
     return wrapper
-
-def numericalize(l):
-    """
-    Takes a list of labels, e.g. strings, and maps
-    them to a unique integer.
-    Example:
-    'A', 'B' -> 0, 1
-    """
-    d = dict([(y,x) for x,y in enumerate(sorted(set(l)))])
-    return np.array([d[x] for x in l])
 
 def plot_train(history):
     acc = history.history['mean_absolute_error']
@@ -53,7 +45,7 @@ def plot_train(history):
 
     plt.show()
     
-def create_pred_dataframe(test_set, station, model):
+def create_pred_dataframe(datapoints, station, model):
     """
     Creates a dataframe with pump values from test_set
     and corresponding estimations from model. Indexed
@@ -61,9 +53,9 @@ def create_pred_dataframe(test_set, station, model):
     """
     
     df = pd.DataFrame({
-        'date': [x['date'] for x in test_set],
-        'true values': [x[station]['quantity (l/s)'] for x in test_set],
-        'estimated': model.predict(test_set).flatten()
+        'date': [x['date'] for x in datapoints],
+        #'true values': [x[station]['quantity (l/S)'] for x in datapoints],
+        'estimated': model.predict(datapoints).flatten()
     })
     
     df.set_index('date', inplace= True)
@@ -87,8 +79,7 @@ def save(model, path_to_dir= None, filename= ''):
                 os.path.join(parent,
                              f'{filename}_pipeline.pkl'))
     
-def load(nn_builder, path_to_dir= None, filename= ''):
-    from project.modeling.estimators import kerasEstimator
+def load(nn_builder, path_to_dir= None, name= ''):
     
     parent = path_to_dir or os.path.join(
         os.path.dirname(__file__), 'model_checkpoints'
@@ -96,12 +87,20 @@ def load(nn_builder, path_to_dir= None, filename= ''):
     
     keras_model = nn_builder()
     keras_model.load_weights(
-        os.path.join(parent, f'{filename}_model.h5'),
+        os.path.join(parent, f'{name}_model.h5'),
     )
     model = joblib.load(
-        os.path.join(parent, f'{filename}_pipeline.pkl')
+        os.path.join(parent, f'{name}_pipeline.pkl')
     )
     model.steps.append(('nn', kerasEstimator(keras_model)))
     return model
+
+def model_exists(name):
+    dirname = os.path.join(
+        os.path.dirname(__file__), 'model_checkpoints'
+    )
+    h5_path = os.path.join(dirname, f'{name}_model.h5')
+    pipe_path = os.path.join(dirname, f'{name}_pipeline.pkl')
+    return os.path.exists(h5_path) and os.path.exists(pipe_path)
 
 def avg(l): return sum(l)/len(l)

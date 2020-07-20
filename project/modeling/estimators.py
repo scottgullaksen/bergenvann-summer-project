@@ -5,7 +5,7 @@ import numpy as np
 
 #from keras.utils import to_categorical
 
-from project.modeling.util import avg
+#from project.modeling.util import avg
 from project.data.reader import PickledDataReader as reader
 from project.util import aggregate_years, aggregate_days
 from project.data.util import merge_stations
@@ -40,6 +40,16 @@ class PumpdataVectorizer(BaseEstimator, TransformerMixin):
         self.averages = [{} for i in range(12)]
         
         #self.reader = reader()
+    
+    @classmethod
+    def get_vector_len(cls):
+        obj = cls('')
+        return sum(map(len, [
+            obj.precipitation_lvls,
+            obj.temp_lvls,
+            obj.tide_lvls,
+            [obj.snowlvl]
+        ])) + 4  # Because of date features
         
     def __get_averages(self, month: int):
 

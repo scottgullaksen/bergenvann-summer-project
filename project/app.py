@@ -1,6 +1,6 @@
 import re
 import pandas as pd
-from datetime import time
+from datetime import time, datetime
 import json
 
 import dash
@@ -8,13 +8,15 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input
 
-from data.reader import PickledDataReader
-from data.util import string_range, merge_stations
+from project.data import reader
+from project.data.util import string_range, merge_stations, stream_to_dataframe
+from project.util import *
+from project.modeling import add_predictions, get_predictions
+from project.components import PeriodSelection, DisplayColumns, AggregationDropdown
+import numpy as np
 
-from components import PeriodSelection, DisplayColumns, AggregationDropdown
-from util import aggregate_days, aggregate_hours, aggregate_months, aggregate_years, create_figure, filter_by_hours, filter_wet_days, resolve_dates
 
-reader = PickledDataReader()
+reader = reader()
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -23,6 +25,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div([
     html.Div([
 
+        # Dropdown for selecting pump station to display in graph
         dcc.Dropdown(
             id= 'dropdown-station',
             options=[ {'label': i, 'value': i} for i in reader.get_stations()],
@@ -30,7 +33,7 @@ app.layout = html.Div([
             multi= True
         ),
 
-        # Container for selecting measurments to be shown in graph
+        # Checkbox container for selecting measurments to be shown in graph
         html.Div([
             dcc.Checklist(
                 id= 'checklist-pump-meas',
@@ -48,6 +51,7 @@ app.layout = html.Div([
                 ],
                 style= {'display':'flex'}
             ),
+            # Filter wetdays components
             dcc.Input(
                 id='input-treshold',
                 type='number',
@@ -73,6 +77,7 @@ app.layout = html.Div([
             )
         ], style= {'display': 'flex'}),
         
+        # Checkbox container for including tide & snow data in graph
         html.Div([
             dcc.Checklist(
                 id= 'checklist-tide',
@@ -88,6 +93,7 @@ app.layout = html.Div([
             )
         ], style= {'display': 'flex'}),
 
+        # Date window selection for data query
         dcc.DatePickerRange(
             id= 'date-selector',
             max_date_allowed= reader.get_latest_date(),
@@ -136,84 +142,81 @@ app.layout = html.Div([
 ])
 
 @app.callback(
-    Output('state-result', 'children'),[
+    #Output('state-result', 'children'),
+    [Output('graph', 'figure'), Output('statistics', 'children')],[
+        
+    # Parameters for data query
     Input('date-selector', 'start_date'),
     Input('date-selector', 'end_date'),
     Input('dropdown-years', 'value'),
     Input('dropdown-months', 'value'),
     Input('dropdown-days', 'value'),
-    Input('dropdown-weekdays', 'value')
-])
-def update_result(start_date, end_date, years, months, days, weekdays):
-
-    start_date, end_date = resolve_dates(start_date, end_date)
-
-    dict_of_df = reader.get_data(start_date, end_date, years, months, days,
-                        weekdays= [] if not weekdays else weekdays)
-    return json.dumps({
-        station: df.to_json(date_format='iso', orient='split')
-        for station, df in dict_of_df.items()
-    })
-
-@app.callback(
-    Output('state-merged-df', 'children'), [
+    Input('dropdown-weekdays', 'value'),
+    
+    # These determine what to display from result
+    #Input('state-result', 'children'),
     Input('dropdown-station', 'value'),
     Input('checklist-pump-meas', 'value'),
     Input('checklist-weather-meas', 'value'),
-    Input('state-result', 'children'),
     Input('input-treshold', 'value'),
     Input('rangeslider-wetdays', 'value'),
     Input('input-lag', 'value'),
     Input('checklist-snow', 'value'),
-    Input('checklist-tide', 'value')
-])
-def update_merged_df(stations, pump_meas, weather_meas, state,
-                     treshold, window_size, lag, snow, tide):
-
-    # Create appropriate argument required by merge
-    stations = {
-        **({s:pump_meas for s in stations}
-        if stations and pump_meas else {})
-    }
-    if weather_meas: stations['vaerdata'] = weather_meas
-    if snow: stations['snodybde'] = snow
-    if tide: stations['tidevannsdata'] = tide
+    Input('checklist-tide', 'value'),
     
-    result = {  # Read from jsonified state
-        station: pd.read_json(jsond_df, orient= 'split')
-        for station, jsond_df in json.loads(state).items()
-    }
-    
-    if treshold:
-        result = filter_wet_days(result, window_size[0], treshold, lag)
-    
-    df = merge_stations(result,stations) if stations else None
-
-    if df is None:
-        raise dash.exceptions.PreventUpdate(
-            'No stations/measurements specified, abort update'
-        )
-
-    return df.to_json(date_format='iso', orient='split')
-
-@app.callback(
-    [Output('graph', 'figure'), Output('statistics', 'children')],[
-    Input('state-merged-df','children'),
+    # Used to filter dataframe before display
     Input('hours-select', 'value'),
     Input('dropdown-hours-agg', 'value'),
     Input('dropdown-days-agg', 'value'),
     Input('dropdown-months-agg', 'value'),
-    Input('dropdown-years-agg', 'value'),]
-)
-def update_graph(jsonified_df, hour_pair, hour_agg_val, days_agg_val, months_agg_val, years_agg_val):
-    if jsonified_df is None:
-        raise dash.exceptions.PreventUpdate(
-            'First time trough callback chain - no graph render'
-        )
+    Input('dropdown-years-agg', 'value')
+])
+def update_graph(start_date, end_date, years, months, days, weekdays, # Used as get_data args
+                 stations, pump_meas, weather_meas, treshold, window_size, lag, snow, tide,
+                 hour_pair, hour_agg_val, days_agg_val, months_agg_val, years_agg_val):
 
-    # To be shown in graph
-    df = pd.read_json(jsonified_df, orient='split')
+    start_date, end_date = resolve_dates(start_date, end_date)
+    
+    result = sorted(
+        reader.get_data(start_date, end_date, years, months, days,
+                        weekdays= weekdays or [], how= 'stream'),
+        key= lambda x: x['date']
+    )
+    
+    df = create_dataframe(result, stations, pump_meas, weather_meas,
+                          treshold, window_size, lag, snow, tide)
+    
+    df, stats = manipulate_dataframe(df, hour_pair, hour_agg_val, days_agg_val,
+                              months_agg_val, years_agg_val)
+    
+    return create_figure(df), DisplayColumns(stats)
 
+
+def create_dataframe(datapoints, stations, pump_meas, weather_meas,
+                     treshold, window_size, lag, snow, tide):
+    
+    # Create appropriate argument required by merge
+    stations = {
+        **({s:(pump_meas + ['estimated']) for s in stations}
+        if stations and pump_meas else {})
+    }
+        
+    if weather_meas: stations['florida_sentrum'] = weather_meas
+    if snow: stations['snodybde'] = snow
+    if tide: stations['tidevannsdata'] = tide
+    
+    df = stream_to_dataframe(
+        add_predictions(datapoints, stations.keys()),
+        stations
+    )
+    
+    if treshold:
+        result = filter_wet_days(result, window_size[0], treshold, lag)
+
+    return df
+
+def manipulate_dataframe(df, hour_pair, hour_agg_val, days_agg_val,
+                        months_agg_val, years_agg_val):
     # Filter as specified
     df = filter_by_hours(df, hour_pair)
     
@@ -236,7 +239,8 @@ def update_graph(jsonified_df, hour_pair, hour_agg_val, days_agg_val, months_agg
     if years_agg_val != None:
         df = aggregate_years(df, years_agg_val)
 
-    return create_figure(df), DisplayColumns(stats)
+    #return create_figure(df), DisplayColumns(stats)
+    return df, stats
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug= True)

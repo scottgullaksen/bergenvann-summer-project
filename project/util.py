@@ -1,4 +1,6 @@
 import pandas as pd
+import re
+from datetime import datetime as dt
 
 def create_figure(df):
     return {
@@ -26,8 +28,6 @@ def create_figure(df):
     }
 
 def resolve_dates(*args):
-    import re
-    from datetime import datetime as dt
     """
     If arguments are date strings, convert to dates, otherwise return None
     """
@@ -95,7 +95,7 @@ def filter_wet_days(dict_of_dfs: dict, num_days: int, treshold: float, lag: int)
         values including current day
         treshold: max treshold value for the summed precipitation level
     """
-    df = dict_of_dfs['vaerdata']
+    df = dict_of_dfs['florida_sentrum']
     current_values = [0] * (num_days * 24) # to store precipitation vals
     
     def check_and_update(value):
@@ -107,10 +107,18 @@ def filter_wet_days(dict_of_dfs: dict, num_days: int, treshold: float, lag: int)
     
     filtered = df[ df['precipitation (mm)'].apply(check_and_update) ]  # filter
     
+    print(filtered)
+    
     return {
-        station: (pd.merge(df, filtered, left_index= True, right_index= True)[[
-            col for col in df.columns
-        ]]
-        if station != 'vaerdata' else filtered)
+        station: (df.loc[df.index.intersection(filtered.index)]
+        if station != 'florida_sentrum' else filtered)
         for station, df in dict_of_dfs.items()
     }
+    
+def get_date_range(dict_of_dfs):
+    """
+    Get earliest and latest dates indexed in the dataframes.
+    Note: Assumes df's are sorted by ascending date
+    """
+    return (min(df.index[0] for df in dict_of_dfs.values()),
+            max(df.index[-1] for df in dict_of_dfs.values()))
