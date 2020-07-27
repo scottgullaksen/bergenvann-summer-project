@@ -73,16 +73,13 @@ if __name__ == "__main__":
     
     #----------------Train and eval scripts---------
     def train():
-        
         # Compile keras model to ready for training
         keras_model = build_fcnn()
-    
         keras_model.compile(
             optimizer= Adam(learning_rate= LR),
             loss= MeanSquaredError(),
             metrics= [MeanAbsoluteError()]
         )
-
         keras_model.summary()
         
         # Define automated pipeline
@@ -96,16 +93,15 @@ if __name__ == "__main__":
                                   val_split= 0.07))
         ])
 
-        # Train, plot perfromance and save model
         model.fit(X_train, Y_train)
 
         plot_train(model.named_steps['nn'].history)
 
-        save(model, filename=station)
+        save(model, name=station)
     
     def evaluate():
         # So you don't have to retrain every time you want to evaluate
-        model = load(build_fcnn, filename=station)
+        model = load(build_fcnn, name=station)
 
         # Get loss(mse) and mae
         score = model.score(X_test, Y_test)
@@ -116,5 +112,5 @@ if __name__ == "__main__":
         df.plot()
         plt.show()
 
-    train()
+    #train()
     evaluate()

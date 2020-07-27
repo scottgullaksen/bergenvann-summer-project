@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
+/*-------------------------Header styling-----------------------------------*/
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0px;
+    background: #f3f3f3;
+}
+
+h4, h5 {
+    text-align: center;
+}
+
+h4 {
+    margin-bottom: 0em;
+}
+
+h5 {
+    font-weight: 100;
+    margin-top: 0em;
+    margin-bottom: 0.8em;
+}
+/*-----------------------1-level wrappers styling---------------------------------------*/
+/*Add space between contents and viewport*/
+#dash-dev-entry {
+    margin: 2vh 2vw;
+}
+
+/*Add space between graph and control panel papers*/
+#graph {
+    margin-top: 2vh;
+}
+
+.paper {
+    background: white;
+    padding: 5px;
+    box-shadow: 3px 3px 2px rgba(0, 0, 0, 0.068);
+    border-radius: 0.25em;
+}
+
+/*Add space between tab-nav-bar and tabcontent*/
+.tab-content {
+    margin-top: 2vh;
+}
+
+/*-----------------------Data source tab content styling-----------------------------*/
+/* First div under data source dropdown*/
+#meas-select {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    padding: 0.5%;
+}
+
+/* Two divs directly under meas-select that wraps
+when width of checkbox element is reached. Auto ensures
+baseline (before wrap) is calculated from that width*/
+#meas-select .fade {
+    flex: 1 1 auto
+}
+
+/* These correspond to the checkboxes, which there are two of:
+one for pump stations and one for weather stations.
+Flex-flow ensures elements wrap when width is reached for the second time*/
+#meas-select .fade div {
+    display: flex;
+    justify-content: space-around;
+    flex-flow: row wrap;
+}
+
+#meas-select .fade div label {
+    width: 11em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#meas-select .fade div label input{
+    margin-right: 0.4em;
+}
+
+/*--------------------------Time tab content stylings-----------------------------*/
+/*First div/container under tab component*/
+#time-form {
+    display: flex;
+    flex-flow: row wrap;
+}
+
+/*Boxes that hold a descriptor and input element*/
+#time-form > div {
+    border-right: 0.5px solid rgb(192, 192, 192);
+    padding: 0.25em 0.5em 0.5em 0.5em;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: space-evenly;
+    align-items: center;
+    flex: 1 0 auto;
+    max-width: 100%;
+}
+
+/*Remove border of last element*/
+#time-form > div:last-child {
+    border-right: none;
+}
+
+#date-selector {
+    flex: 1 0 auto
+}
+
+#hours-select {
+    flex: 1 0 0;
+    min-width: 20em;
+}
+
+#time-form .dash-dropdown {
+    white-space: nowrap;
+    flex: 1 0 0;
+    min-width: 5em;
+}
+
+#time-form > div > p {
+    white-space: nowrap;
+    margin-bottom: 0;
+    margin-right: 0.25em;
+    flex: 0 0 auto;
+}
+
+/*------------------Aggragation tab content stylings-------------------------------------*/
+/*First wrapper below navbar*/
+#agg-form {
+    display: flex;
+    flex-flow: row wrap;
+}
+
+/*Description on its own line (width)*/
+#agg-form > p {
+    width: 100%;
+    text-align: center;
+}
+
+/*Tww divs so dropdowns are wrapped 2by2
+Second highest flexbasis -> wrapped second to first*/
+#agg-form > div {
+    flex: 1 1 10.5em;
+    display: flex;
+    flex-flow: row wrap;
+}
+
+/*Two of these are wrapped inside above div
+Highest flexbasis -> First to wrap onto multiple lines*/
+#agg-form > div > div {
+    flex: 1 1 11em;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+/* text container does not flex*/
+#agg-form div div p {
+    text-align: center;
+    flex: 0 0 4em;
+    margin: 0em 0.5em;
+}
+
+/* dropdowns can flex horisontally and wraps lastly of all wrapeable content*/
+#agg-form .dash-dropdown {
+    flex: 1 0 5em;
+}

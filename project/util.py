@@ -15,17 +15,20 @@ def create_figure(df):
             ) for col in df.columns
         ],
         'layout': {
-            'title': {
-                'text': 'Sensordata',
-                'xanchor': 'center',
-                'xref': 'paper',
-                'y': 0.98
-            },
             'transition': {'duration': 500},
             'margin': {'l': 20, 'b': 20, 't': 20, 'r': 10},
             'legend': {'x': 0 , 'yref': 'paper', 'y': 1, 'xref': 'paper', 'bgcolor': 'rgba(0,0,0,0)'}
         }
     }
+    
+"""
+'title': {
+    'text': 'Sensordata',
+    'xanchor': 'center',
+    'xref': 'paper',
+    'y': 0.98
+},
+"""
 
 def resolve_dates(*args):
     """
