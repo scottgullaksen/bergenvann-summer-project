@@ -5,7 +5,7 @@ import os
 import pickle
 import pandas as pd
 from datetime import datetime, timedelta
-from .util import abspath, find_first_filepath, find_last_filepath, PUMPSTATIONS
+from project.data.util import abspath, find_first_filepath, find_last_filepath, PUMPSTATIONS
 
 
 with open('./project/logging.yaml', 'r') as f:
@@ -183,7 +183,7 @@ class PickledDataReader(object):
 
     def get_stations(self):
         # Should change so reads from pickled corpus instead
-        return PUMPSTATIONS + ['vaerdata', 'tidevannsdata', 'snodybde']
+        return PUMPSTATIONS + ['florida_uib', 'florida_sentrum', 'tidevannsdata', 'snodybde']
 
     def get_file_content(self, paths: list):
         for file_path in paths:

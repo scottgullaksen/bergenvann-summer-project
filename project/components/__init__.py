@@ -3,6 +3,7 @@ import dash_html_components as html
 
 from project.components.timetab import TimeperiodForm
 from project.components.agg_tab import AggregationForm
+from project.components.precipitation_tab import PrecipitationForm
 
 def DisplayColumns(df):
 	"""

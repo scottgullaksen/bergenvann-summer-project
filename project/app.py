@@ -13,13 +13,13 @@ from project.data import reader
 from project.data.util import string_range, merge_stations, stream_to_dataframe, PUMPSTATIONS
 from project.util import *
 from project.modeling import add_predictions, get_predictions
-from project.components import DisplayColumns, AggregationForm, TimeperiodForm
+from project.components import *
 import numpy as np
 
 
 reader = reader()
 
-external_stylesheets = [dbc.themes.BOOTSTRAP, 'https://codepen.io/chriddyp/pen/bWLwgP.css']
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
@@ -29,80 +29,72 @@ app.layout = html.Div([
     
     html.H5('Analyseverktøy'),
     
-    html.Div(className= 'paper', children= dbc.Tabs([
-        
-        dbc.Tab(label= 'Datakilder', children= [
-            # Dropdown for selecting pump station to display in graph
-            dcc.Dropdown(
-                id= 'dropdown-station',
-                options=[ {'label': i, 'value': i} for i in reader.get_stations()],
-                placeholder= 'Velg stasjon...',
-                multi= True
-            ),
-            # Checkbox container for selecting measurments to be shown in graph
-            html.Div([
-                dbc.Fade(
-                    dcc.Checklist(
-                        id= 'checklist-pump-meas',
-                        options= [
-                            {'label': 'pumpemengde (l/s)', 'value': 'quantity (l/s)'},
-                            {'label': 'nivå, sump (moh)', 'value': 'level (m)'}
-                        ]
+    html.Div(
+        className= 'paper',
+        children= dcc.Tabs(
+            className= 'custom-tabs-container',
+            parent_className= 'custom-tabs',
+            children= [
+            dcc.Tab(
+                label= 'Datakilder',
+                className= 'custom-tab',
+                selected_className='custom-tab--selected',
+                children= [
+                    # Dropdown for selecting pump station to display in graph
+                    dcc.Dropdown(
+                        id= 'dropdown-station',
+                        options=[ {'label': i, 'value': i} for i in reader.get_stations()],
+                        placeholder= 'Velg stasjon...',
+                        multi= True
                     ),
-                    id= 'fade-pump',
-                    is_in= False
-                ),
-                dbc.Fade(
-                    dcc.Checklist(
-                        id= 'checklist-weather-meas',
-                        options= [
-                            {'label': 'nedbør (mm)', 'value': 'precipitation (mm)'},
-                            {'label': 'temperatur (C)', 'value': 'temp (C)'}
-                        ]
-                    ),
-                    id= 'fade-weather',
-                    is_in= False
-                )
-            ], id= 'meas-select')
-        ]),
-        # Filter wetdays components
-        dbc.Tab(label= 'Nedbørs-filter', children= [
-            dcc.Input(
-                id='input-treshold',
-                type='number',
-                min= 0,
-                placeholder= 'Max nedbør (mm)',
-                style={'margin': '0% 1%'},
+                    # Checkbox container for selecting measurments to be shown in graph
+                    html.Div([
+                        html.Div(
+                            id= 'hide-pump',
+                            children= dcc.Checklist(
+                                id= 'checklist-pump-meas',
+                                options= [
+                                    {'label': 'pumpemengde (l/s)', 'value': 'quantity (l/s)'},
+                                    {'label': 'nivå, sump (moh)', 'value': 'level (m)'}
+                                ]
+                            ),
+                        ),
+                        html.Div(
+                            id= 'hide-weather',
+                            children= dcc.Checklist(
+                                id= 'checklist-weather-meas',
+                                options= [
+                                    {'label': 'nedbør (mm)', 'value': 'precipitation (mm)'},
+                                    {'label': 'temperatur (C)', 'value': 'temp (C)'}
+                                ]
+                            )
+                        )
+                    ], id= 'meas-select')
+                ]
             ),
-            html.Div(dcc.RangeSlider(
-                id= 'rangeslider-wetdays',
-                max= 5,
-                min= 1,
-                step= 1,
-                value= [1],
-                marks={  i: str(i) for i in range(1, 6) }
-            ), style= { 'width': '20%'}),
-            dcc.Input(
-                id='input-lag',
-                type='number',
-                min= 0,
-                placeholder= 'lag',
-                style={'margin': '0% 1%'},
-                value= 0
+
+            # Filter wetdays components
+            dcc.Tab(
+                label= 'Nedbørs-filter',
+                className= 'custom-tab',
+                selected_className='custom-tab--selected',
+                children= PrecipitationForm
+            ),
+
+            # Date window selection for data query
+            dcc.Tab(
+                label= 'Tidsvindu',
+                className= 'custom-tab',
+                selected_className='custom-tab--selected',
+                children= TimeperiodForm
+            ),
+
+            dcc.Tab(
+                label= 'Aggregering',
+                className= 'custom-tab',
+                selected_className='custom-tab--selected',
+                children= AggregationForm
             )
-        ]),
-        
-        
-        # Date window selection for data query
-        dbc.Tab(
-            label= 'Tidsvindu',
-            children= TimeperiodForm
-        ),
-        
-        dbc.Tab(
-            label= 'Aggregering',
-            children= AggregationForm
-        )
     ])),
 
     dcc.Graph(id='graph', className= 'paper'),
@@ -112,24 +104,24 @@ app.layout = html.Div([
 ], id= 'dash-dev-entry')
 
 @app.callback(
-    [Output('fade-pump', 'is_in'), Output('fade-pump', 'style')],
+    Output('hide-pump', 'style'),
     [Input('dropdown-station', 'value')]
 )
-def fade(dropdown_selesctions):
+def hide(dropdown_selesctions):
     is_in = (dropdown_selesctions != None and
             any(s in dropdown_selesctions for s in PUMPSTATIONS))
     style = {} if is_in else {'display': 'none'}
-    return is_in, style
+    return style
 
 @app.callback(
-    Output('fade-weather', 'is_in'),
+    Output('hide-weather', 'style'),
     [Input('dropdown-station', 'value')]
 )
-def fade(dropdown_selesctions):
-    return True
-    return (dropdown_selesctions != None and
+def hide(dropdown_selesctions):
+    is_in = (dropdown_selesctions != None and
             any('florida' in ds for ds in dropdown_selesctions))
-
+    style = {} if is_in else {'display': 'none'}
+    return style
 
 @app.callback(
     #Output('state-result', 'children'),
@@ -150,7 +142,6 @@ def fade(dropdown_selesctions):
     Input('checklist-weather-meas', 'value'),
     Input('input-treshold', 'value'),
     Input('rangeslider-wetdays', 'value'),
-    Input('input-lag', 'value'),
     
     # Used to filter dataframe before display
     Input('hours-select', 'value'),
@@ -160,7 +151,7 @@ def fade(dropdown_selesctions):
     Input('dropdown-years-agg', 'value')
 ])
 def update_graph(start_date, end_date, years, months, days, weekdays, # Used as get_data args
-                 stations, pump_meas, weather_meas, treshold, window_size, lag,
+                 stations, pump_meas, weather_meas, treshold, window,
                  hour_pair, hour_agg_val, days_agg_val, months_agg_val, years_agg_val):
 
     start_date, end_date = resolve_dates(start_date, end_date)
@@ -171,36 +162,43 @@ def update_graph(start_date, end_date, years, months, days, weekdays, # Used as 
         key= lambda x: x['date']
     )
     
-    df = create_dataframe(result, stations, pump_meas, weather_meas)
+    df = create_dataframe(result, stations, pump_meas,
+                          weather_meas, treshold, window)
     
-    df, stats = manipulate_dataframe(df, hour_pair, treshold, window_size, lag,
-                                     hour_agg_val, days_agg_val, months_agg_val, years_agg_val)
+    df, stats = manipulate_dataframe(df, hour_pair, hour_agg_val, days_agg_val,
+                                     months_agg_val, years_agg_val)
     
     return create_figure(df), DisplayColumns(stats)
 
-def create_dataframe(datapoints, stations, pump_meas, weather_meas):
+def create_dataframe(datapoints, stations, pump_meas,
+                     weather_meas, treshold, window):
     
-    # Create appropriate argument required by merge
-    stations = {
-        **({s:(pump_meas + ['estimated']) for s in stations}
-        if stations and pump_meas else {})
-    }
-        
-    if weather_meas: stations['florida_sentrum'] = weather_meas
+    if treshold:
+        datapoints = filter_wet_days(datapoints, window, treshold)
+    
+    # Define data to include in dataframe
+    stations = stations or []
+    df_data = {}
+    
+    for s in stations:
+        if s in PUMPSTATIONS and pump_meas:
+            df_data[s] = pump_meas + ['estimated']
+        elif 'florida' in s and weather_meas:
+            df_data[s] = weather_meas
+        elif s == 'snodybde':
+            df_data[s] = ['snodybde (cm)']
+        elif s == 'tidevannsdata':
+            df_data[s] = ['level (cm)']
     
     return stream_to_dataframe(
-        add_predictions(datapoints, stations.keys()),
-        stations
+        add_predictions(datapoints, df_data.keys()),
+        df_data
     )
 
-def manipulate_dataframe(df, hour_pair, treshold, window_size, lag,
-                         hour_agg_val, days_agg_val, months_agg_val, years_agg_val):
+def manipulate_dataframe(df, hour_pair, hour_agg_val, days_agg_val,
+                         months_agg_val, years_agg_val):
     # Filter as specified
     df = filter_by_hours(df, hour_pair)
-    
-        
-    if treshold:
-        df = filter_wet_days(df, window_size[0], treshold, lag)
     
     # To be shown beneath graph
     stats = df.agg({

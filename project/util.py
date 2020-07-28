@@ -86,7 +86,7 @@ def aggregate_years(df: pd.DataFrame, method: str = 'mean'):
     df.columns = df.columns.droplevel(1)
     return df
 
-def filter_wet_days(dict_of_dfs: dict, num_days: int, treshold: float, lag: int):
+def filter_wet_days(datapoints, window: list, treshold: float):
     """
     Removes datapoints that is considered to be from "rainy" days.
     What is determined as a rainy day, depends on num_days and value.
@@ -98,8 +98,9 @@ def filter_wet_days(dict_of_dfs: dict, num_days: int, treshold: float, lag: int)
         values including current day
         treshold: max treshold value for the summed precipitation level
     """
-    df = dict_of_dfs['florida_sentrum']
-    current_values = [0] * (num_days * 24) # to store precipitation vals
+    num_hours = 100 - window[0]
+    current_values = [0] * num_hours # to store precipitation vals
+    lag = 100 - window[1]
     
     def check_and_update(value):
         # FIFO - keeps length the same
@@ -108,10 +109,13 @@ def filter_wet_days(dict_of_dfs: dict, num_days: int, treshold: float, lag: int)
         # In case lag is 0 -> must use len
         return sum(current_values[:len(current_values) - lag]) < treshold
     
-    filtered = df[ df['precipitation (mm)'].apply(check_and_update) ]  # filter
-    
-    return {
-        station: (df.loc[df.index.intersection(filtered.index)]
-        if station != 'florida_sentrum' else filtered)
-        for station, df in dict_of_dfs.items()
-    }
+    for dp in datapoints:
+        if 'florida_sentrum' in dp:
+            val = dp['florida_sentrum']['precipitation (mm)']
+        elif 'florida_uib' in dp:
+            val = dp['florida_uib']['precipitation (mm)']
+        else:
+            val = 0 # whats the deffault?
+            #print(f'no precipitation data for datapoint from {dp["date"]}')
+        if check_and_update(val):
+            yield dp

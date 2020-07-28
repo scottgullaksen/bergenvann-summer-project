@@ -1,12 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
 
-/*-------------------------Header styling-----------------------------------*/
 body {
     font-family: 'Roboto', sans-serif;
     margin: 0px;
     background: #f3f3f3;
 }
 
+/*-------------------------Header styling-----------------------------------*/
 h4, h5 {
     text-align: center;
 }
@@ -38,9 +38,53 @@ h5 {
     border-radius: 0.25em;
 }
 
-/*Add space between tab-nav-bar and tabcontent*/
-.tab-content {
-    margin-top: 2vh;
+/*----------------------Custom tab stylings--------------------------------*/
+/* Mobile first */
+.custom-tabs-container {
+    margin-bottom: 1em;
+}
+
+.tab.custom-tab {
+    background-color: white;
+    padding: 0.5em 0;
+}
+
+.tab.custom-tab:first-of-type {
+    border-radius: 0.25em 0.25em 0 0;
+}
+
+.tab.custom-tab:last-of-type {
+    border-radius: 0 0 0.25em 0.25em;
+}
+
+/* For all wider devices tabs are organised in rows*/
+@media screen and (min-width: 500px) {
+    .tab.custom-tab {
+        border: none;
+        border-bottom: 1px solid #d6d6d6;
+        width: calc(100% / 4);
+        border-radius: 0.25em 0.25em 0 0;
+    }
+
+    .tab.custom-tab:last-of-type {
+        border-right: none;
+    }
+
+    .tab--selected.custom-tab--selected {
+        border: 1px solid #d6d6d6;
+        border-bottom: none;
+    }
+
+    .tab--selected.custom-tab--selected:last-of-type {
+        border-bottom: none;
+        border-right: 1px solid #d6d6d6;
+    }
+
+    .tab-container.custom-tabs-container {
+        -webkit-flex-direction: row;
+        -ms-flex-direction: row;
+        flex-direction: row;
+    }
 }
 
 /*-----------------------Data source tab content styling-----------------------------*/
@@ -55,27 +99,27 @@ h5 {
 /* Two divs directly under meas-select that wraps
 when width of checkbox element is reached. Auto ensures
 baseline (before wrap) is calculated from that width*/
-#meas-select .fade {
+#meas-select > div {
     flex: 1 1 auto
 }
 
 /* These correspond to the checkboxes, which there are two of:
 one for pump stations and one for weather stations.
 Flex-flow ensures elements wrap when width is reached for the second time*/
-#meas-select .fade div {
+#meas-select > div div {
     display: flex;
     justify-content: space-around;
     flex-flow: row wrap;
 }
 
-#meas-select .fade div label {
+#meas-select > div div label {
     width: 11em;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-#meas-select .fade div label input{
+#meas-select > div div label input{
     margin-right: 0.4em;
 }
 
@@ -134,6 +178,7 @@ Flex-flow ensures elements wrap when width is reached for the second time*/
 
 /*Description on its own line (width)*/
 #agg-form > p {
+    color: rgba(87, 87, 87, 0.753);
     width: 100%;
     text-align: center;
 }
@@ -166,4 +211,23 @@ Highest flexbasis -> First to wrap onto multiple lines*/
 /* dropdowns can flex horisontally and wraps lastly of all wrapeable content*/
 #agg-form .dash-dropdown {
     flex: 1 0 5em;
+}
+
+/*-----------------------------Precipitation filter form styiling------------------------*/
+#prec-form > p {
+    color: rgba(87, 87, 87, 0.753);
+}
+
+#prec-form > div > div:first-of-type {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+}
+
+#prec-form > div > div:first-of-type p {
+    margin: 0px;
+}
+
+#input-treshold {
+    flex: 0 1 15em;
 }
