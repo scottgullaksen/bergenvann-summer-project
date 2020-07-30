@@ -5,8 +5,6 @@ from project.data import reader
 from project.data.util import string_range
 from datetime import time
 
-reader = reader()
-
 # Re-useable components
 
 def PeriodDropdown(value_range, id):

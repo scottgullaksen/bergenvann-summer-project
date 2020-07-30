@@ -1,34 +1,115 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
 
 body {
-    font-family: 'Roboto', sans-serif;
+    font-size: 1.6em; /* currently ems cause chrome bug misinterpreting rems on body element */
     margin: 0px;
     background: #f3f3f3;
 }
 
-/*-------------------------Header styling-----------------------------------*/
+/* Larger than mobile */
+@media (min-width: 400px) {
+    body {
+        font-size: 1.55em;
+    }
+}
+
+/* Larger than phablet (also point when grid becomes active) */
+@media (min-width: 550px) {
+    body {
+        font-size: 1.5em;
+    }
+}
+
+/* Larger than tablet */
+@media (min-width: 750px) {
+    body {
+        font-size: 1.45em;
+    }
+}
+
+/* Larger than desktop */
+@media (min-width: 1000px) {
+    body {
+        font-size: 1.4em;
+    }
+}
+
+/* Larger than Desktop HD */
+@media (min-width: 1200px) {
+    body {
+        font-size: 1.35em;
+    }
+}
+
+/* Header styling
+------------------------------------------------*/
+
 h4, h5 {
     text-align: center;
 }
 
 h4 {
-    margin-bottom: 0em;
+    font-size: 1.8em;
+    font-weight: 500;
+    margin-block-start: 0.5em;
+    margin-block-end: 0;
 }
 
 h5 {
-    font-weight: 100;
-    margin-top: 0em;
-    margin-bottom: 0.8em;
+    font-size: 1.3em;
+    font-weight: 500;
+    margin-block-start: 0;
+    margin-block-end: 0.5em;
 }
-/*-----------------------1-level wrappers styling---------------------------------------*/
+
+h6 {
+    font-size: 1.2em;
+    line-height: 1.6;
+    letter-spacing: 0;
+    margin-bottom: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+/*When in portrait mode, not necessary 
+to see title (already seen)*/
+@media (min-aspect-ratio: 8/3) {
+    h4, h5 {
+        display: none;
+    }
+}
+
+/*1-level wrappers styling
+------------------------------------------------*/
 /*Add space between contents and viewport*/
 #dash-dev-entry {
     margin: 2vh 2vw;
+    scroll-snap-type: y mandatory;
+}
+
+/*Try to focus view on important places...*/
+#dash-dev-entry > div:first-of-type, h4 {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
+
+/*Tab and graph should take up entire vieport,
+minus margins*/
+#dash-dev-entry > div:first-of-type {
+    height: 96vh;
+    width: 96vw;
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+/* Make outer contaitner row flex if viewport narrow?*/
+@media (min-aspect-ratio: 2/1) {
+
 }
 
 /*Add space between graph and control panel papers*/
 #graph {
     margin-top: 2vh;
+    flex: 1 1 0; /* Doesn't shrink...*/
 }
 
 .paper {
@@ -36,6 +117,15 @@ h5 {
     padding: 5px;
     box-shadow: 3px 3px 2px rgba(0, 0, 0, 0.068);
     border-radius: 0.25em;
+}
+
+#statistics {
+    margin-top: 2vh;
+}
+
+
+#statistics div:not(:last-child){ /*statistics cards*/
+    margin-right: 2vw;
 }
 
 /*----------------------Custom tab stylings--------------------------------*/
@@ -58,7 +148,7 @@ h5 {
 }
 
 /* For all wider devices tabs are organised in rows*/
-@media screen and (min-width: 500px) {
+@media (min-width: 420px), (min-aspect-ratio: 2/1) {
     .tab.custom-tab {
         border: none;
         border-bottom: 1px solid #d6d6d6;

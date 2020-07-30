@@ -1,1 +1,3 @@
-from project.data.reader import PickledDataReader as reader
+from project.data.reader import PickledDataReader
+
+reader = PickledDataReader()

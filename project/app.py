@@ -16,12 +16,13 @@ from project.modeling import add_predictions, get_predictions
 from project.components import *
 import numpy as np
 
-
-reader = reader()
-
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(
+    __name__,
+    meta_tags = [{
+        'name': 'viewport',
+        'content': 'width=device-width, initial-scale=1.0'
+    }]
+)
 
 app.layout = html.Div([
     
@@ -29,78 +30,35 @@ app.layout = html.Div([
     
     html.H5('Analyseverktøy'),
     
-    html.Div(
-        className= 'paper',
-        children= dcc.Tabs(
-            className= 'custom-tabs-container',
-            parent_className= 'custom-tabs',
-            children= [
-            dcc.Tab(
-                label= 'Datakilder',
-                className= 'custom-tab',
-                selected_className='custom-tab--selected',
+    # Wrapper for main content on page
+    html.Div([
+        # Wrapper for tab and tab contents
+        html.Div(
+            className= 'paper',
+            children= dcc.Tabs(
+                className= 'custom-tabs-container',
+                parent_className= 'custom-tabs',
                 children= [
-                    # Dropdown for selecting pump station to display in graph
-                    dcc.Dropdown(
-                        id= 'dropdown-station',
-                        options=[ {'label': i, 'value': i} for i in reader.get_stations()],
-                        placeholder= 'Velg stasjon...',
-                        multi= True
-                    ),
-                    # Checkbox container for selecting measurments to be shown in graph
-                    html.Div([
-                        html.Div(
-                            id= 'hide-pump',
-                            children= dcc.Checklist(
-                                id= 'checklist-pump-meas',
-                                options= [
-                                    {'label': 'pumpemengde (l/s)', 'value': 'quantity (l/s)'},
-                                    {'label': 'nivå, sump (moh)', 'value': 'level (m)'}
-                                ]
-                            ),
-                        ),
-                        html.Div(
-                            id= 'hide-weather',
-                            children= dcc.Checklist(
-                                id= 'checklist-weather-meas',
-                                options= [
-                                    {'label': 'nedbør (mm)', 'value': 'precipitation (mm)'},
-                                    {'label': 'temperatur (C)', 'value': 'temp (C)'}
-                                ]
-                            )
-                        )
-                    ], id= 'meas-select')
+                    dcc.Tab(
+                        label= label,
+                        className= 'custom-tab',
+                        selected_className= 'custom-tab--selected',
+                        children= content
+                    ) for label, content in [
+                        ('Datakilder', DataSourceForm),
+                        ('Nedbørs-filter', PrecipitationForm),
+                        ('Tidsvindu', TimeperiodForm),
+                        ('Aggregering', AggregationForm)
+                    ]
                 ]
-            ),
-
-            # Filter wetdays components
-            dcc.Tab(
-                label= 'Nedbørs-filter',
-                className= 'custom-tab',
-                selected_className='custom-tab--selected',
-                children= PrecipitationForm
-            ),
-
-            # Date window selection for data query
-            dcc.Tab(
-                label= 'Tidsvindu',
-                className= 'custom-tab',
-                selected_className='custom-tab--selected',
-                children= TimeperiodForm
-            ),
-
-            dcc.Tab(
-                label= 'Aggregering',
-                className= 'custom-tab',
-                selected_className='custom-tab--selected',
-                children= AggregationForm
             )
-    ])),
-
-    dcc.Graph(id='graph', className= 'paper'),
+        ),
+        dcc.Graph(id='graph', className= 'paper', responsive= True)
+    ]),
 
     # Container for conditional render of statistics
-    html.Div(id= 'statistics', className= 'paper')
+    html.Div(id= 'statistics')
+
 ], id= 'dash-dev-entry')
 
 @app.callback(
@@ -124,7 +82,7 @@ def hide(dropdown_selesctions):
     return style
 
 @app.callback(
-    #Output('state-result', 'children'),
+
     [Output('graph', 'figure'), Output('statistics', 'children')],[
         
     # Parameters for data query
@@ -136,7 +94,6 @@ def hide(dropdown_selesctions):
     Input('dropdown-weekdays', 'value'),
     
     # These determine what to display from result
-    #Input('state-result', 'children'),
     Input('dropdown-station', 'value'),
     Input('checklist-pump-meas', 'value'),
     Input('checklist-weather-meas', 'value'),
@@ -179,7 +136,6 @@ def create_dataframe(datapoints, stations, pump_meas,
     # Define data to include in dataframe
     stations = stations or []
     df_data = {}
-    
     for s in stations:
         if s in PUMPSTATIONS and pump_meas:
             df_data[s] = pump_meas + ['estimated']
@@ -219,7 +175,6 @@ def manipulate_dataframe(df, hour_pair, hour_agg_val, days_agg_val,
     if years_agg_val != None:
         df = aggregate_years(df, years_agg_val)
 
-    #return create_figure(df), DisplayColumns(stats)
     return df, stats
 
 if __name__ == '__main__':
