@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
 
+
+
+html {
+    scroll-snap-type: y proximity;
+}
+ 
 body {
     font-size: 1.6em; /* currently ems cause chrome bug misinterpreting rems on body element */
     margin: 0px;
@@ -78,18 +84,26 @@ to see title (already seen)*/
     }
 }
 
+/* Button
+------------------------------------------------*/
+#hide-button {
+    position: absolute;
+    top: 4.5em;
+    right: -1;
+    z-index: 1;
+    box-shadow: 3px 3px 2px rgba(0, 0, 0, 0.068);
+}
+
 /*1-level wrappers styling
 ------------------------------------------------*/
 /*Add space between contents and viewport*/
 #dash-dev-entry {
     margin: 2vh 2vw;
-    scroll-snap-type: y mandatory;
 }
 
 /*Try to focus view on important places...*/
-#dash-dev-entry > div:first-of-type, h4 {
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
+#dash-dev-entry > div:first-of-type {
+    scroll-snap-align: center;
 }
 
 /*Tab and graph should take up entire vieport,
@@ -119,7 +133,7 @@ minus margins*/
     border-radius: 0.25em;
 }
 
-#statistics {
+#statistics > div {
     margin-top: 2vh;
 }
 
@@ -129,51 +143,62 @@ minus margins*/
 }
 
 /*----------------------Custom tab stylings--------------------------------*/
+/*Yes, I know !important is terrible, but the react js stylings
+from the component keeps overriding my css no matter what...(Hotfix)*/
 /* Mobile first */
+
+
 .custom-tabs-container {
-    margin-bottom: 1em;
+    margin-bottom: 1em !important;
 }
 
 .tab.custom-tab {
-    background-color: white;
-    padding: 0.5em 0;
+    background-color: white !important;
+    padding: 0.5em 0 !important;
 }
 
 .tab.custom-tab:first-of-type {
-    border-radius: 0.25em 0.25em 0 0;
+    border-radius: 0.25em 0.25em 0 0 !important;
 }
 
 .tab.custom-tab:last-of-type {
-    border-radius: 0 0 0.25em 0.25em;
+    border-radius: 0 0 0.25em 0.25em !important;
 }
 
 /* For all wider devices tabs are organised in rows*/
-@media (min-width: 420px), (min-aspect-ratio: 2/1) {
-    .tab.custom-tab {
-        border: none;
-        border-bottom: 1px solid #d6d6d6;
-        width: calc(100% / 4);
-        border-radius: 0.25em 0.25em 0 0;
+@media (min-width: 420px) {
+    .tab.jsx-1653633250 {
+        border: none !important;
+        border-bottom: 1px solid #d6d6d6 !important;
+        width: calc(100% / 4) !important;
+        border-radius: 0.25em 0.25em 0 0 !important;
     }
 
-    .tab.custom-tab:last-of-type {
-        border-right: none;
+    .tab.jsx-1653633250:last-of-type {
+        border-right: none !important;
+        border-radius: 0 !important;
     }
 
-    .tab--selected.custom-tab--selected {
-        border: 1px solid #d6d6d6;
-        border-bottom: none;
+    .tab--selected.jsx-1653633250 {
+        border: 1px solid #d6d6d6 !important;
+        border-bottom: none !important;
     }
 
-    .tab--selected.custom-tab--selected:last-of-type {
-        border-bottom: none;
-        border-right: 1px solid #d6d6d6;
+    .tab.jsx-1653633250:last-of-type.tab--selected {
+        border-bottom: none !important;
+        border-right: 1px solid #d6d6d6 !important;
+        border-radius: 0.25em 0.25em 0 0 !important;
     }
 
-    .tab-container.custom-tabs-container {
-        -webkit-flex-direction: row;
-        -ms-flex-direction: row;
-        flex-direction: row;
+    .tab-container.jsx-4017309047 {
+        -webkit-flex-direction: row !important;
+        -ms-flex-direction: row !important;
+        flex-direction: row !important;
+    }
+
+    .tab:not(.tab--selected):hover {
+        background-color: rgba(245, 245, 245, 0.568) !important;
+        transition: ease-in .2s;
     }
 }
 

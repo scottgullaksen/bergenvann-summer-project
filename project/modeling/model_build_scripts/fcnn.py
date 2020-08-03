@@ -44,8 +44,8 @@ if __name__ == "__main__":
     
     #-------------------Define datasets------------------------------------
     # Load data
-    reader = reader()
     station = 'Gronneviksoren'
+    save_name = station
 
     dataset = sorted([
         x for x in reader.get_data(
@@ -97,11 +97,11 @@ if __name__ == "__main__":
 
         plot_train(model.named_steps['nn'].history)
 
-        save(model, name=station)
+        save(model, name=save_name)
     
     def evaluate():
         # So you don't have to retrain every time you want to evaluate
-        model = load(build_fcnn, name=station)
+        model = load(build_fcnn, name=save_names)
 
         # Get loss(mse) and mae
         score = model.score(X_test, Y_test)

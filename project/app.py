@@ -30,10 +30,13 @@ app.layout = html.Div([
     
     html.H5('Analyseverktøy'),
     
+    html.Button(id= 'hide-button'),
+    
     # Wrapper for main content on page
     html.Div([
         # Wrapper for tab and tab contents
         html.Div(
+            id= 'controller',
             className= 'paper',
             children= dcc.Tabs(
                 className= 'custom-tabs-container',
@@ -60,6 +63,15 @@ app.layout = html.Div([
     html.Div(id= 'statistics')
 
 ], id= 'dash-dev-entry')
+
+@app.callback(
+    [Output('hide-button', 'children'), Output('controller', 'style')],
+    [Input('hide-button', 'n_clicks')]
+)
+def render_controller(n_clicks):
+    style = {'display': 'none'} if n_clicks and n_clicks % 2 == 1 else {}
+    button_text = 'hide' if not style else 'show'
+    return button_text, style
 
 @app.callback(
     Output('hide-pump', 'style'),
@@ -130,6 +142,9 @@ def update_graph(start_date, end_date, years, months, days, weekdays, # Used as 
 def create_dataframe(datapoints, stations, pump_meas,
                      weather_meas, treshold, window):
     
+    if pump_meas and 'estimated' in pump_meas:
+        datapoints = add_predictions(datapoints, stations)
+        
     if treshold:
         datapoints = filter_wet_days(datapoints, window, treshold)
     
@@ -138,7 +153,7 @@ def create_dataframe(datapoints, stations, pump_meas,
     df_data = {}
     for s in stations:
         if s in PUMPSTATIONS and pump_meas:
-            df_data[s] = pump_meas + ['estimated']
+            df_data[s] = pump_meas
         elif 'florida' in s and weather_meas:
             df_data[s] = weather_meas
         elif s == 'snodybde':
@@ -146,10 +161,7 @@ def create_dataframe(datapoints, stations, pump_meas,
         elif s == 'tidevannsdata':
             df_data[s] = ['level (cm)']
     
-    return stream_to_dataframe(
-        add_predictions(datapoints, df_data.keys()),
-        df_data
-    )
+    return stream_to_dataframe(datapoints, df_data)
 
 def manipulate_dataframe(df, hour_pair, hour_agg_val, days_agg_val,
                          months_agg_val, years_agg_val):
@@ -161,6 +173,9 @@ def manipulate_dataframe(df, hour_pair, hour_agg_val, days_agg_val,
         col: ['mean', 'max', 'min', 'median', 'sum', 'std']
         for col in df.columns
     })
+    
+    # No need to filter further
+    if df.empty: return df, stats
     
     # Repeating code here, fix later
     if hour_agg_val != None:

@@ -21,7 +21,8 @@ DataSourceForm = html.Div([
                 id= 'checklist-pump-meas',
                 options= [
                     {'label': 'pumpemengde (l/s)', 'value': 'quantity (l/s)'},
-                    {'label': 'nivå, sump (moh)', 'value': 'level (m)'}
+                    {'label': 'nivå, sump (moh)', 'value': 'level (m)'},
+                    {'label': 'estimat', 'value': 'estimated' }
                 ]
             ),
         ),
