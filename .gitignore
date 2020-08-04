@@ -1,5 +1,6 @@
-.vscode
+.vscode/
 .log
 pickled_data/
 __pycache__/
+myproect.egg-info/
 *.pyc
