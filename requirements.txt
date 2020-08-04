@@ -64,7 +64,7 @@ retrying==1.3.3
 rsa==4.0
 scikit-learn==0.23.1
 scipy==1.5.0
-setuptools==47.3.1.post20200622
+setuptools
 six==1.15.0
 tensorboard==2.2.1
 tensorboard-plugin-wit==1.6.0
