@@ -23,6 +23,8 @@ app = dash.Dash(
     }]
 )
 
+server = app.server
+
 app.layout = html.Div([
     
     html.H4('Bergen Vann Pumpedata'),
