@@ -3,3 +3,4 @@
 pickled_data/
 __pycache__/
 *.pyc
+myproject.egg-info/
