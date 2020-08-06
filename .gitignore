@@ -2,5 +2,5 @@
 .log
 pickled_data/
 __pycache__/
-myproject.egg-info/
 *.pyc
+setup.py
