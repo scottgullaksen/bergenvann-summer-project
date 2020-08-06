@@ -3,4 +3,3 @@
 pickled_data/
 __pycache__/
 *.pyc
-setup.py
