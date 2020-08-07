@@ -1,8 +1,8 @@
 -e .
-gunicorn
 pandas
 dash
 tensorflow
 sklearn
 pyyaml
 matplotlib
+gunicorn
