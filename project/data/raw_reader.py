@@ -65,7 +65,7 @@ class CSVFileReader(object):
 
         for path in self.paths:
             if dir_or_filename in path:  # Only return contents of relevant files
-                with open(path) as csvfile:
+                with open(path, encoding = "ISO-8859-1") as csvfile:
                     for row in reader(csvfile):
                         try:
                             yield cleaner(row)
