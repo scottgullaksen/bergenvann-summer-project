@@ -31,6 +31,8 @@ class PickledDataReader(object):
             )
         )
         
+        self.logger.info(f'instantiating with reading dir: {self.path}')
+        
         # Used by get_data to determine read method
         self.read_as = {
             'dataframe': self.__as_dataframes,
@@ -40,7 +42,7 @@ class PickledDataReader(object):
     def __path_to_date(self, path) -> datetime:
         try:
             date_string = os.path.splitext(os.path.relpath(path, self.path))[0]
-            return datetime.strptime(date_string, '%Y\\%m\\%d')
+            return datetime.strptime(date_string, f'%Y{os.sep}%m{os.sep}%d')
 
         except ValueError as ve:
             import calendar
@@ -51,7 +53,7 @@ class PickledDataReader(object):
                 Use last day of month instead.
                 """
             )
-            y, m = tuple(int(s) for s in date_string.split('\\')[:2])
+            y, m = tuple(int(s) for s in date_string.split(os.sep)[:2])
             return datetime(y, m, calendar.monthrange(y, m)[1])           
 
     def __resolve_dates(self, date1: datetime, date2: datetime):
