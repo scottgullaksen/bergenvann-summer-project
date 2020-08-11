@@ -34,7 +34,7 @@ def add_predictions(datapoints, stations: list):
         # Get model, dataset and predictions
         model = util.load(fcnn.build_fcnn, name= s)
         dataset = list(filter(lambda x: s in x, datapoints))
-        preds = model.predict(dataset).flatten()
+        preds = model.predict(dataset)
         
         # Create datastructure to keep track of 'next' prediction
         date_pred_gen = ((x['date'], y) for x, y in zip(dataset, preds))

@@ -6,8 +6,8 @@ from sklearn.preprocessing import StandardScaler
 
 from project.modeling.estimators import PumpdataVectorizer, kerasEstimator
 
-#------------Define keras neural net model---------------------------
-def build_fcnn():
+#------------Define keras neural net models---------------------------
+def gvsrn_nn():
     return Sequential([
         BatchNormalization(
             input_shape=(PumpdataVectorizer.get_vector_len(), )
@@ -23,14 +23,23 @@ def build_fcnn():
         #Dropout(0.5),
         Dense(units= 1)
     ])
+    
+build_fcnn = {
+    'Gronneviksoren': gvsrn_nn,
+    'WolffsGate': gvsrn_nn,
+    'GeorgernesVerft': gvsrn_nn,
+    'ThorMohlensVilVite': gvsrn_nn,
+    'Nygardstangen': gvsrn_nn
+}
 
 if __name__ == "__main__":
     from datetime import datetime as dt
     import matplotlib.pyplot as plt
+    import numpy as np
     
-    from keras.optimizers import Adam
-    from keras.losses import MeanSquaredError
-    from keras.metrics import MeanAbsoluteError
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.losses import MeanSquaredError
+    from tensorflow.keras.metrics import MeanAbsoluteError
     
     from project.data import reader
     from project.modeling.util import plot_train, create_pred_dataframe, save, load
@@ -40,14 +49,15 @@ if __name__ == "__main__":
     BATCH_SIZE = 512
     LR = 1e-4
     INPUT_SIZE = (125,) # Constant
-    TEST_SIZE = 5000
+    TEST_SIZE = 1000
     
     #-------------------Define datasets------------------------------------
     # Load data
-    station = 'Gronneviksoren'
+    station = 'Nygardstangen'
     save_name = station
 
-    dataset = sorted([
+    # These dates are picked based on available weather data
+    """dataset = sorted([
         x for x in reader.get_data(
             dt(2010, 4, 1),
             dt(2011, 3, 13),
@@ -60,9 +70,32 @@ if __name__ == "__main__":
             how= 'stream'
         )
         if station in x
+    ], key= lambda x: x['date'])"""
+    
+    # For station: GeorgenesVerft
+    dataset = sorted([
+        x for x in reader.get_data(
+            dt(2012, 10, 25, 11),
+            dt(2012, 11, 30, 11),
+            how= 'stream'
+        )
+        if station in x
+    ] + [
+        x for x in reader.get_data(
+            dt(2012, 12, 11, 11),
+            dt(2015, 1, 6, 7),
+            how= 'stream'
+        )
+        if station in x
+    ] + [
+        x for x in reader.get_data(
+            dt(2015, 1, 13, 12),
+            how= 'stream'
+        )
+        if station in x
     ], key= lambda x: x['date'])
     
-    labels = [x[station]['quantity (l/s)'] for x in dataset]
+    labels = np.array([x[station]['quantity (l/s)'] for x in dataset])
     
     # Train-test splits
     X_train = dataset[:-TEST_SIZE]
@@ -74,7 +107,7 @@ if __name__ == "__main__":
     #----------------Train and eval scripts---------
     def train():
         # Compile keras model to ready for training
-        keras_model = build_fcnn()
+        keras_model = build_fcnn[station]()
         keras_model.compile(
             optimizer= Adam(learning_rate= LR),
             loss= MeanSquaredError(),
@@ -97,11 +130,17 @@ if __name__ == "__main__":
 
         plot_train(model.named_steps['nn'].history)
 
-        save(model, name=save_name)
+        save(model, filename=save_name)
     
     def evaluate():
         # So you don't have to retrain every time you want to evaluate
-        model = load(build_fcnn, name=save_names)
+        model = load(build_fcnn, name=save_name)
+        
+        model.named_steps['nn'].model.compile(
+            optimizer= Adam(learning_rate= LR),
+            loss= MeanSquaredError(),
+            metrics= [MeanAbsoluteError()]
+        )
 
         # Get loss(mse) and mae
         score = model.score(X_test, Y_test)
@@ -112,5 +151,5 @@ if __name__ == "__main__":
         df.plot()
         plt.show()
 
-    #train()
+    train()
     evaluate()

@@ -55,7 +55,7 @@ def create_pred_dataframe(datapoints, station, model):
     
     df = pd.DataFrame({
         'date': [x['date'] for x in datapoints],
-        'true values': [x[station]['quantity (l/S)'] for x in datapoints],
+        'true values': [x[station]['quantity (l/s)'] for x in datapoints],
         'estimated': model.predict(datapoints).flatten()
     })
     
@@ -86,7 +86,7 @@ def load(nn_builder, path_to_dir= None, name= ''):
         os.path.dirname(__file__), 'model_checkpoints'
     )
     
-    keras_model = nn_builder()
+    keras_model = nn_builder[name]()
     keras_model.load_weights(
         os.path.join(parent, f'{name}_model.h5'),
     )

@@ -1,10 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
-
-
-
-html {
-    scroll-snap-type: y proximity;
-}
  
 body {
     font-size: 1.6em; /* currently ems cause chrome bug misinterpreting rems on body element */
@@ -76,34 +70,38 @@ h6 {
     margin-top: 0.75rem;
 }
 
-/*When in portrait mode, not necessary 
-to see title (already seen)*/
-@media (min-aspect-ratio: 8/3) {
-    h4, h5 {
-        display: none;
-    }
-}
-
 /* Button
 ------------------------------------------------*/
 #hide-button {
     position: absolute;
-    top: 4.5em;
+    top: 5.5em;
     right: -1;
     z-index: 1;
     box-shadow: 3px 3px 2px rgba(0, 0, 0, 0.068);
+    border-color: rgb(172, 172, 172);
+}
+
+#hide-button:hover {
+    border-color: grey;
+}
+
+@media (min-width: 400px) {
+    #hide-button {
+        top: 4.5em;
+    }
 }
 
 /*1-level wrappers styling
 ------------------------------------------------*/
 /*Add space between contents and viewport*/
 #dash-dev-entry {
-    margin: 2vh 2vw;
+    margin: 2vmax;
 }
 
-/*Try to focus view on important places...*/
-#dash-dev-entry > div:first-of-type {
-    scroll-snap-align: center;
+@media (min-width: 400px) {
+    #dash-dev-entry {
+        margin: 2vmin;
+    }
 }
 
 /*Tab and graph should take up entire vieport,
@@ -123,7 +121,7 @@ minus margins*/
 /*Add space between graph and control panel papers*/
 #graph {
     margin-top: 2vh;
-    flex: 1 1 0; /* Doesn't shrink...*/
+    flex: 1 0 48vh; /* Doesn't shrink...*/
 }
 
 .paper {
@@ -133,8 +131,19 @@ minus margins*/
     border-radius: 0.25em;
 }
 
+#statistics {
+    display: flex;
+}
+
 #statistics > div {
     margin-top: 2vh;
+    width: 100%;
+}
+
+@media (min-width: 400px) {
+    #statistics > div {
+        width: unset;
+    }
 }
 
 

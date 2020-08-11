@@ -290,10 +290,11 @@ class kerasEstimator(BaseEstimator):
             batch_size= self.batch_size,
             validation_split= self.val_split
         )
+        
         return self
 
     def predict(self, X):
-        return self.model.predict(X)
+        return self.model.predict(X).flatten()
 
     def score(self, X, y):
         """
