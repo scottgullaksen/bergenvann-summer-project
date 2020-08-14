@@ -1,8 +1,9 @@
 -e .
+tensorflow==1.13.1
 pandas
 dash
-tensorflow
 sklearn
 pyyaml
 matplotlib
 gunicorn
+requests

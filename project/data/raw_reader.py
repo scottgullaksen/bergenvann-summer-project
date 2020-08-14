@@ -48,7 +48,7 @@ class CSVFileReader(object):
         if len(self.paths) == 0:
             raise ValueError("The provided directory/file contained no csv files")
 
-    def read_datapoints_from(self, reader, cleaner, dir_or_filename= None):
+    def read(self, reader, cleaner, dir_or_filename= None):
         """
         Yields processed/cleaned datapoints from the csv files under
         dir_or_filenmae.
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     reader = CSVFileReader()
 
     counter = 0
-    for row in reader.read_datapoints_from(weather_reader, florida_uib_cleaner, 'florida_uib'):
+    for row in reader.read(weather_reader, florida_uib_cleaner, 'florida_uib'):
         if counter == 10: break
         counter += 1
         print(row)

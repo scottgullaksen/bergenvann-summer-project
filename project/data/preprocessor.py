@@ -70,7 +70,7 @@ class Preprocessor(object):
         # These correspond to files or directories
         # Their values are descriptions of how to process the respective files under kwrd
         for kwrd in self.processors.keys():
-            for datapoint in self.reader.read_datapoints_from(
+            for datapoint in self.reader.read(
                 self.processors[kwrd]['reader'],
                 self.processors[kwrd]['cleaner'],
                 dir_or_filename= kwrd
